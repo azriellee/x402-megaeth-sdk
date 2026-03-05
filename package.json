@@ -1,0 +1,46 @@
+{
+  "name": "x402-megaeth-sdk",
+  "version": "0.1.0",
+  "description": "x402 micropayment SDK for native ETH on MegaETH",
+  "license": "MIT",
+  "keywords": [
+    "x402",
+    "micropayments",
+    "megaeth",
+    "ethereum",
+    "web3",
+    "sdk",
+    "http-402"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "demo:server": "tsx demo/server.ts",
+    "demo:client": "tsx demo/client.ts"
+  },
+  "dependencies": {
+    "viem": "^2.23.0"
+  },
+  "peerDependencies": {
+    "express": "^4.0.0 || ^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "dotenv": "^16.4.0",
+    "express": "^5.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}
