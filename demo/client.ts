@@ -27,11 +27,17 @@ async function main() {
   console.log(`Requests to make: ${NUM_REQUESTS}\n`);
 
   const txHashes: string[] = [];
+  const endpoints = [
+    `${SERVER_URL}/health`,
+    `${SERVER_URL}/usdm-health`,
+    `${SERVER_URL}/usdm-health`,
+  ];
 
-  for (let i = 1; i <= NUM_REQUESTS; i++) {
-    console.log(`--- Request ${i}/${NUM_REQUESTS} ---`);
+  for (let i = 0; i < endpoints.length; i++) {
+    const endpoint = endpoints[i];
+    console.log(`--- Request ${i + 1}/${endpoints.length} to ${endpoint.split(SERVER_URL)[1]} ---`);
 
-    const response = await x402Fetch(`${SERVER_URL}/health`);
+    const response = await x402Fetch(endpoint);
     const data = await response.json();
 
     console.log(`Status: ${response.status}`);

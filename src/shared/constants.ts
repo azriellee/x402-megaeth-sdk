@@ -21,3 +21,5 @@ export const megaeth = defineChain({
 export const X402_VERSION = 2 as const;
 export const DEFAULT_MAX_TIMEOUT_SECONDS = 120;
 export const DEFAULT_ETH_USD_RATE = 2000;
+
+export const USDM_ADDRESS = "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7" as const;

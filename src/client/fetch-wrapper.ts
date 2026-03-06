@@ -36,7 +36,7 @@ export function createX402Fetch(
       `[x402] Payment required: ${paymentRequired.accepts[0]?.amount} wei to ${paymentRequired.accepts[0]?.payTo}`
     );
 
-    // Create payment (sends ETH on-chain)
+    // Create payment (sends ETH on-chain for exact-native or signs USDm permit for permit-erc20)
     const paymentPayload = await payer.createPayment(paymentRequired);
     console.log(`[x402] Payment sent: ${paymentPayload.payload.txHash}`);
 
