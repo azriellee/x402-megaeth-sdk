@@ -35,10 +35,13 @@ async function main() {
     const endpoint = endpoints[i];
     console.log(`--- Request ${i + 1}/${endpoints.length} to ${endpoint.split(SERVER_URL)[1]} ---`);
 
+    const startTime = performance.now();
     const response = await x402Fetch(endpoint);
     const data = await response.json();
+    const endTime = performance.now();
+    const durationMs = (endTime - startTime).toFixed(2);
 
-    console.log(`Status: ${response.status}`);
+    console.log(`Status: ${response.status} (completed in ${durationMs}ms)`);
     console.log(`Response:`, JSON.stringify(data, null, 2));
 
     // Extract payment info

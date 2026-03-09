@@ -31,11 +31,11 @@ app.use(
         description: "Health check endpoint — 0.2 cent micropayment",
       },
       "/usdm-health": {
-        price: "$0.02", // 2 cents 
+        price: "$0.02", 
         payTo: SERVER_WALLET,
         asset: "USDM",
         scheme: "permit-erc20",
-        description: "Health check endpoint — 2 cents in USDM via permit",
+        description: "Health check endpoint — $5 in USDM via permit",
         extra: { spender: FACILITATOR_WALLET }, // The facilitator pays gas and transfers funds
       },
     },
