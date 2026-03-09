@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import { privateKeyToAccount } from "viem/accounts";
 import { paymentMiddleware } from "../src/server/middleware.js";
 import { DEFAULT_ETH_USD_RATE } from "../src/shared/constants.js";
@@ -18,6 +19,9 @@ const SERVER_WALLET = account.address;
 console.log(`Server wallet (payTo): ${SERVER_WALLET}`);
 
 const app = express();
+app.use(cors({
+  exposedHeaders: ['PAYMENT-REQUIRED', 'PAYMENT-RESPONSE']
+}));
 
 const FACILITATOR_WALLET = SERVER_WALLET;
 
@@ -31,7 +35,7 @@ app.use(
         description: "Health check endpoint — 0.2 cent micropayment",
       },
       "/usdm-health": {
-        price: "$0.02", 
+        price: "$0.02",
         payTo: SERVER_WALLET,
         asset: "USDM",
         scheme: "permit-erc20",

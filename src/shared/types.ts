@@ -61,7 +61,7 @@ export interface RouteConfig {
   extra?: Record<string, unknown>;
 }
 
-export type RoutesConfig = Record<string, RouteConfig>;
+export type RoutesConfig = Record<string, RouteConfig | RouteConfig[]>;
 
 export interface MiddlewareConfig {
   routes: RoutesConfig;
