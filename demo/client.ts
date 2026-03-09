@@ -5,18 +5,23 @@ import { decodeSettleResponse } from "../src/shared/headers.js";
 import { MEGAETH_EXPLORER } from "../src/shared/constants.js";
 import { formatEther } from "viem";
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
+const PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY as `0x${string}`;
 if (!PRIVATE_KEY) {
-  console.error("PRIVATE_KEY not set in .env");
+  console.error("CLIENT_PRIVATE_KEY not set in .env");
   process.exit(1);
 }
 
 const SERVER_URL = process.env.SERVER_URL || "http://localhost:3402";
-const NUM_REQUESTS = 3;
 
 async function main() {
   const payer = new X402Payer(PRIVATE_KEY);
   const x402Fetch = createX402Fetch(payer);
+
+  const txHashes: string[] = [];
+  const endpoints = [
+    `${SERVER_URL}/health`,
+    `${SERVER_URL}/usdm-health`,
+  ];
 
   console.log("=== x402 MegaETH Micropayment Demo ===\n");
   console.log(`Payer address: ${payer.address}`);
@@ -24,17 +29,19 @@ async function main() {
   const balance = await payer.getBalance();
   console.log(`Wallet balance: ${formatEther(balance)} ETH`);
   console.log(`Server: ${SERVER_URL}`);
-  console.log(`Requests to make: ${NUM_REQUESTS}\n`);
+  console.log(`Requests to make: ${endpoints.length}\n`);
 
-  const txHashes: string[] = [];
+  for (let i = 0; i < endpoints.length; i++) {
+    const endpoint = endpoints[i];
+    console.log(`--- Request ${i + 1}/${endpoints.length} to ${endpoint.split(SERVER_URL)[1]} ---`);
 
-  for (let i = 1; i <= NUM_REQUESTS; i++) {
-    console.log(`--- Request ${i}/${NUM_REQUESTS} ---`);
-
-    const response = await x402Fetch(`${SERVER_URL}/health`);
+    const startTime = performance.now();
+    const response = await x402Fetch(endpoint);
     const data = await response.json();
+    const endTime = performance.now();
+    const durationMs = (endTime - startTime).toFixed(2);
 
-    console.log(`Status: ${response.status}`);
+    console.log(`Status: ${response.status} (completed in ${durationMs}ms)`);
     console.log(`Response:`, JSON.stringify(data, null, 2));
 
     // Extract payment info

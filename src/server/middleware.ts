@@ -3,6 +3,7 @@ import type {
   MiddlewareConfig,
   PaymentRequired,
   PaymentRequirements,
+  SettleResponse,
 } from "../shared/types.js";
 import {
   MEGAETH_NETWORK,
@@ -15,10 +16,8 @@ import {
   decodePaymentPayload,
   encodeSettleResponse,
 } from "../shared/headers.js";
-import { PaymentVerifier } from "./verifier.js";
 
 export function paymentMiddleware(config: MiddlewareConfig) {
-  const verifier = new PaymentVerifier(config.rpcUrl);
   const ethUsdRate = config.ethUsdRate;
 
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -27,19 +26,26 @@ export function paymentMiddleware(config: MiddlewareConfig) {
       return next();
     }
 
-    const amount = parsePrice(routeConfig.price, ethUsdRate).toString();
     const network = routeConfig.network ?? MEGAETH_NETWORK;
     const maxTimeoutSeconds =
       routeConfig.maxTimeoutSeconds ?? DEFAULT_MAX_TIMEOUT_SECONDS;
+    const asset = routeConfig.asset ?? "ETH";
+    const scheme = routeConfig.scheme ?? "exact-native";
+    // asset must be resolved first so parsePrice knows which decimal system to use
+    const amount = parsePrice(routeConfig.price, ethUsdRate, asset).toString();
 
     const requirements: PaymentRequirements = {
-      scheme: "exact-native",
+      scheme,
       network,
-      asset: "ETH",
+      asset,
       amount,
       payTo: routeConfig.payTo,
       maxTimeoutSeconds,
+      ...(routeConfig.extra ? { extra: routeConfig.extra } : {}),
     };
+
+    // Output all possible accepts, currently server handles one configured standard but could handle an array.
+    const accepts = [requirements];
 
     // Check for payment header
     const paymentHeader =
@@ -54,7 +60,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
           url: req.originalUrl,
           description: routeConfig.description,
         },
-        accepts: [requirements],
+        accepts,
       };
 
       const encoded = encodePaymentRequired(paymentRequired);
@@ -64,10 +70,27 @@ export function paymentMiddleware(config: MiddlewareConfig) {
       return;
     }
 
-    // Verify payment
+    // Verify payment by calling the facilitator
     try {
       const payload = decodePaymentPayload(paymentHeader);
-      const result = await verifier.verify(payload, requirements);
+
+      if (!config.facilitatorUrl) {
+        throw new Error("facilitatorUrl is not configured");
+      }
+
+      const response = await fetch(`${config.facilitatorUrl}/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ payload, requirements })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Facilitator error: ${response.statusText}`);
+      }
+
+      const result = await response.json() as SettleResponse;
 
       if (!result.success) {
         const paymentRequired: PaymentRequired = {
@@ -77,7 +100,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
             url: req.originalUrl,
             description: routeConfig.description,
           },
-          accepts: [requirements],
+          accepts,
         };
 
         res.status(402);
@@ -89,14 +112,17 @@ export function paymentMiddleware(config: MiddlewareConfig) {
         return;
       }
 
-      // Payment verified — set response headers and continue
+      // Payment verified — store settlement in res.locals so route handlers can
+      // embed payer/txHash in their JSON body, then set response headers and continue.
+      res.locals.payerAddress = result.payer;
+      res.locals.paymentTxHash = result.txHash;
       res.setHeader("PAYMENT-RESPONSE", encodeSettleResponse(result));
       res.setHeader("x-payer-address", result.payer);
       res.setHeader("x-payment-tx", result.txHash);
       next();
     } catch (err) {
       res.status(400).json({
-        error: "Invalid payment header",
+        error: "Invalid payment header or verification failure",
         details: err instanceof Error ? err.message : String(err),
       });
     }

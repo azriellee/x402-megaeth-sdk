@@ -2,10 +2,12 @@ import "dotenv/config";
 import express from "express";
 import { privateKeyToAccount } from "viem/accounts";
 import { paymentMiddleware } from "../src/server/middleware.js";
+import { DEFAULT_ETH_USD_RATE } from "../src/shared/constants.js";
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
+// server and facilitator same wallet for this demo
+const PRIVATE_KEY = process.env.FACILITATOR_PRIVATE_KEY as `0x${string}`;
 if (!PRIVATE_KEY) {
-  console.error("PRIVATE_KEY not set in .env");
+  console.error("FACILITATOR_PRIVATE_KEY not set in .env");
   process.exit(1);
 }
 
@@ -17,17 +19,28 @@ console.log(`Server wallet (payTo): ${SERVER_WALLET}`);
 
 const app = express();
 
+const FACILITATOR_WALLET = SERVER_WALLET;
+
 // x402 payment middleware — gates specified routes
 app.use(
   paymentMiddleware({
     routes: {
       "/health": {
-        price: "$0.0001", // 0.01 cents
+        price: "$0.002", // 0.2 cents
         payTo: SERVER_WALLET,
-        description: "Health check endpoint — 0.01 cent micropayment",
+        description: "Health check endpoint — 0.2 cent micropayment",
+      },
+      "/usdm-health": {
+        price: "$0.02", 
+        payTo: SERVER_WALLET,
+        asset: "USDM",
+        scheme: "permit-erc20",
+        description: "Health check endpoint — $5 in USDM via permit",
+        extra: { spender: FACILITATOR_WALLET }, // The facilitator pays gas and transfers funds
       },
     },
-    ethUsdRate: Number(process.env.ETH_USD_RATE) || 2000,
+    ethUsdRate: DEFAULT_ETH_USD_RATE,
+    facilitatorUrl: process.env.FACILITATOR_URL || "http://localhost:3403",
   })
 );
 
@@ -36,9 +49,20 @@ app.get("/health", (req, res) => {
   res.json({
     status: "healthy",
     timestamp: new Date().toISOString(),
-    message: "You paid 0.01 cents in ETH for this health check on MegaETH!",
-    paidBy: req.headers["x-payer-address"] as string,
-    txHash: req.headers["x-payment-tx"] as string,
+    message: "You paid 0.1 cents in ETH for this health check on MegaETH!",
+    paidBy: res.locals.payerAddress as string,
+    txHash: res.locals.paymentTxHash as string,
+    network: "MegaETH (eip155:4326)",
+  });
+});
+
+app.get("/usdm-health", (req, res) => {
+  res.json({
+    status: "super-healthy",
+    timestamp: new Date().toISOString(),
+    message: "You paid 2 cents in USDM via permit for this health check on MegaETH!",
+    paidBy: res.locals.payerAddress as string,
+    txHash: res.locals.paymentTxHash as string,
     network: "MegaETH (eip155:4326)",
   });
 });
@@ -50,7 +74,8 @@ app.get("/", (req, res) => {
     version: "0.1.0",
     endpoints: {
       "/": "This info page (free)",
-      "/health": "Health check (0.01 cent micropayment via x402)",
+      "/health": "Health check (0.1 cent micropayment via x402 ETH)",
+      "/usdm-health": "Health check (2 cents micropayment via x402 USDM permit)",
     },
   });
 });
@@ -58,5 +83,5 @@ app.get("/", (req, res) => {
 const PORT = 3402;
 app.listen(PORT, () => {
   console.log(`x402 demo server running on http://localhost:${PORT}`);
-  console.log(`Try: curl http://localhost:${PORT}/health`);
+  console.log(`Try: curl http://localhost:${PORT}/health or /usdm-health`);
 });

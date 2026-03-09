@@ -25,8 +25,10 @@
   },
   "scripts": {
     "build": "tsup",
+    "demo:facilitator": "tsx demo/facilitator.ts",
     "demo:server": "tsx demo/server.ts",
-    "demo:client": "tsx demo/client.ts"
+    "demo:client": "tsx demo/client.ts",
+    "test:chain": "tsx src/tests/test-chain.ts"
   },
   "dependencies": {
     "viem": "^2.23.0"
