@@ -38,7 +38,13 @@ export function createX402Fetch(
 
     // Create payment (sends ETH on-chain for exact-native or signs USDm permit for permit-erc20)
     const paymentPayload = await payer.createPayment(paymentRequired);
-    console.log(`[x402] Payment sent: ${paymentPayload.payload.txHash}`);
+    // For exact-native: client already sent the tx, so txHash is available here.
+    // For permit-erc20: client only signed a permit — the facilitator submits the
+    // on-chain tx, so txHash is undefined until the server responds.
+    const logDetail = paymentPayload.accepted.scheme === "exact-native"
+      ? `txHash: ${paymentPayload.payload.txHash}`
+      : `permit signed (facilitator will settle on-chain)`;
+    console.log(`[x402] ${logDetail}`);
 
     // Retry request with payment proof
     const retryHeaders = new Headers(init?.headers);

@@ -35,6 +35,43 @@ export class FacilitatorVerifier {
   private usedTxHashes: Set<string> = new Set();
   private processedPermits: Set<string> = new Set(); // To prevent replay of the same permit signature
 
+  /**
+   * MegaETH's RPC can return null for eth_getTransactionByHash.
+   * However, the transaction is always present in the block itself.
+   * We use the receipt's blockHash to fetch the block and extract the tx.
+   */
+  private async getTransactionFromBlockOrRPC(
+    receipt: { blockHash: Hash, transactionHash: Hash },
+    retries = 8,
+    delayMs = 500
+  ) {
+    for (let i = 0; i < retries; i++) {
+      // 1. Try standard eth_getTransactionByHash
+      const tx = await this.publicClient.getTransaction({ hash: receipt.transactionHash }).catch(() => null);
+      if (tx) return tx;
+
+      // 2. Fallback: fetch block and find transaction inside it
+      // MegaETH RPC reliably returns block contents even if getTransactionByHash is unindexed
+      try {
+        const block = await this.publicClient.getBlock({
+          blockHash: receipt.blockHash,
+          includeTransactions: true
+        });
+        const blockTx = block.transactions.find(
+          (t) => typeof t === "object" && t.hash === receipt.transactionHash
+        );
+        if (blockTx) {
+          return blockTx as any; // Type assertion since viem block tx type might differ slightly, but it has to/from/value
+        }
+      } catch (err) {
+        // Block might not be fully available yet, continue retry loop
+      }
+
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+    return null;
+  }
+
   constructor(rpcUrl: string = MEGAETH_RPC, privateKey?: `0x${string}`) {
     this.publicClient = createPublicClient({
       chain: megaeth,
@@ -115,15 +152,25 @@ export class FacilitatorVerifier {
     }
 
     try {
-      let tx: Awaited<ReturnType<PublicClient["getTransaction"]>> | null = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          tx = await this.publicClient.getTransaction({ hash: txHash as Hash });
-          break;
-        } catch {
-          if (attempt < 2) await new Promise((r) => setTimeout(r, 500));
-        }
+      // Robustly wait for the transaction to be indexed by the RPC node.
+      // This solves issues with load-balanced RPC endpoints that haven't synced yet.
+      const receipt = await this.publicClient.waitForTransactionReceipt({
+        hash: txHash as Hash,
+      });
+
+      if (receipt.status !== "success") {
+        return {
+          success: false,
+          txHash,
+          network,
+          payer: from,
+          errorReason: "Transaction reverted on-chain",
+        };
       }
+
+      // MegaETH can have indexing issues where getTransaction returns null.
+      // We fall back to finding the transaction within its confirmed block.
+      const tx = await this.getTransactionFromBlockOrRPC(receipt);
 
       if (!tx) {
         return {
@@ -131,7 +178,7 @@ export class FacilitatorVerifier {
           txHash,
           network,
           payer: from,
-          errorReason: "Transaction not found on-chain",
+          errorReason: "Transaction not found on-chain after retries (RPC indexing lag)",
         };
       }
 
@@ -165,20 +212,6 @@ export class FacilitatorVerifier {
         };
       }
 
-      const receipt = await this.publicClient.getTransactionReceipt({
-        hash: txHash as Hash,
-      });
-
-      if (receipt.status !== "success") {
-        return {
-          success: false,
-          txHash,
-          network,
-          payer: from,
-          errorReason: "Transaction reverted on-chain",
-        };
-      }
-
       this.usedTxHashes.add(txHash);
 
       return {
@@ -193,9 +226,8 @@ export class FacilitatorVerifier {
         txHash,
         network,
         payer: from,
-        errorReason: `Verification error: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        errorReason: `Verification error: ${err instanceof Error ? err.message : String(err)
+          }`,
       };
     }
   }
@@ -271,7 +303,7 @@ export class FacilitatorVerifier {
       // Wait for permit to be mined
       const permitReceipt = await this.publicClient.waitForTransactionReceipt({ hash: permitTxHash });
       if (permitReceipt.status !== "success") {
-         return {
+        return {
           success: false,
           txHash: permitTxHash,
           network,
@@ -294,7 +326,7 @@ export class FacilitatorVerifier {
 
       const transferReceipt = await this.publicClient.waitForTransactionReceipt({ hash: transferTxHash });
       if (transferReceipt.status !== "success") {
-         return {
+        return {
           success: false,
           txHash: transferTxHash,
           network,
@@ -318,9 +350,8 @@ export class FacilitatorVerifier {
         txHash: "",
         network,
         payer: from,
-        errorReason: `Permit/Transfer Execution error: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        errorReason: `Permit/Transfer Execution error: ${err instanceof Error ? err.message : String(err)
+          }`,
       };
     }
   }

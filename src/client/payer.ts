@@ -9,7 +9,7 @@ import {
   type Transport,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { megaeth, MEGAETH_RPC, MEGAETH_CHAIN_ID, X402_VERSION } from "../shared/constants.js";
+import { megaeth, MEGAETH_RPC, MEGAETH_CHAIN_ID, X402_VERSION, MEGAETH_MIN_GAS } from "../shared/constants.js";
 import type {
   PaymentRequired,
   PaymentPayload,
@@ -53,7 +53,7 @@ export class X402Payer {
     paymentRequired: PaymentRequired
   ): Promise<PaymentPayload> {
     // Prefer permit-erc20 if available, otherwise exact-native
-    const accepted = 
+    const accepted =
       paymentRequired.accepts.find((a) => a.scheme === "permit-erc20") ||
       paymentRequired.accepts.find((a) => a.scheme === "exact-native");
 
@@ -64,10 +64,13 @@ export class X402Payer {
     const amount = BigInt(accepted.amount);
 
     if (accepted.scheme === "exact-native") {
-      // Send native ETH transaction
+      // MegaETH requires a minimum of 60,000 gas (21k compute + 39k storage).
+      // Viem defaults to 21,000 for a simple ETH transfer (not MegaETH-aware),
+      // which causes the RPC to silently drop the tx with "intrinsic gas too low".
       const txHash = await this.walletClient.sendTransaction({
         to: accepted.payTo as `0x${string}`,
         value: amount,
+        gas: MEGAETH_MIN_GAS,
         chain: megaeth,
       });
 

@@ -5,18 +5,23 @@ import { decodeSettleResponse } from "../src/shared/headers.js";
 import { MEGAETH_EXPLORER } from "../src/shared/constants.js";
 import { formatEther } from "viem";
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
+const PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY as `0x${string}`;
 if (!PRIVATE_KEY) {
-  console.error("PRIVATE_KEY not set in .env");
+  console.error("CLIENT_PRIVATE_KEY not set in .env");
   process.exit(1);
 }
 
 const SERVER_URL = process.env.SERVER_URL || "http://localhost:3402";
-const NUM_REQUESTS = 3;
 
 async function main() {
   const payer = new X402Payer(PRIVATE_KEY);
   const x402Fetch = createX402Fetch(payer);
+
+  const txHashes: string[] = [];
+  const endpoints = [
+    `${SERVER_URL}/health`,
+    `${SERVER_URL}/usdm-health`,
+  ];
 
   console.log("=== x402 MegaETH Micropayment Demo ===\n");
   console.log(`Payer address: ${payer.address}`);
@@ -24,14 +29,7 @@ async function main() {
   const balance = await payer.getBalance();
   console.log(`Wallet balance: ${formatEther(balance)} ETH`);
   console.log(`Server: ${SERVER_URL}`);
-  console.log(`Requests to make: ${NUM_REQUESTS}\n`);
-
-  const txHashes: string[] = [];
-  const endpoints = [
-    `${SERVER_URL}/health`,
-    `${SERVER_URL}/usdm-health`,
-    `${SERVER_URL}/usdm-health`,
-  ];
+  console.log(`Requests to make: ${endpoints.length}\n`);
 
   for (let i = 0; i < endpoints.length; i++) {
     const endpoint = endpoints[i];

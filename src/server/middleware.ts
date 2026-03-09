@@ -26,12 +26,13 @@ export function paymentMiddleware(config: MiddlewareConfig) {
       return next();
     }
 
-    const amount = parsePrice(routeConfig.price, ethUsdRate).toString();
     const network = routeConfig.network ?? MEGAETH_NETWORK;
     const maxTimeoutSeconds =
       routeConfig.maxTimeoutSeconds ?? DEFAULT_MAX_TIMEOUT_SECONDS;
     const asset = routeConfig.asset ?? "ETH";
     const scheme = routeConfig.scheme ?? "exact-native";
+    // asset must be resolved first so parsePrice knows which decimal system to use
+    const amount = parsePrice(routeConfig.price, ethUsdRate, asset).toString();
 
     const requirements: PaymentRequirements = {
       scheme,
@@ -45,7 +46,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
 
     // Output all possible accepts, currently server handles one configured standard but could handle an array.
     const accepts = [requirements];
-    
+
     // Check for payment header
     const paymentHeader =
       (req.headers["payment-signature"] as string) ??
@@ -74,7 +75,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
       const payload = decodePaymentPayload(paymentHeader);
 
       if (!config.facilitatorUrl) {
-         throw new Error("facilitatorUrl is not configured");
+        throw new Error("facilitatorUrl is not configured");
       }
 
       const response = await fetch(`${config.facilitatorUrl}/verify`, {
@@ -86,7 +87,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
       });
 
       if (!response.ok) {
-         throw new Error(`Facilitator error: ${response.statusText}`);
+        throw new Error(`Facilitator error: ${response.statusText}`);
       }
 
       const result = await response.json() as SettleResponse;
@@ -111,7 +112,10 @@ export function paymentMiddleware(config: MiddlewareConfig) {
         return;
       }
 
-      // Payment verified — set response headers and continue
+      // Payment verified — store settlement in res.locals so route handlers can
+      // embed payer/txHash in their JSON body, then set response headers and continue.
+      res.locals.payerAddress = result.payer;
+      res.locals.paymentTxHash = result.txHash;
       res.setHeader("PAYMENT-RESPONSE", encodeSettleResponse(result));
       res.setHeader("x-payer-address", result.payer);
       res.setHeader("x-payment-tx", result.txHash);

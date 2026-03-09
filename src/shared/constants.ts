@@ -4,7 +4,19 @@ import type { Network } from "./types.js";
 export const MEGAETH_CHAIN_ID = 4326;
 export const MEGAETH_NETWORK: Network = "eip155:4326";
 export const MEGAETH_RPC = "https://mainnet.megaeth.com/rpc";
-export const MEGAETH_EXPLORER = "https://megaeth.blockscout.com";
+// NOTE: Blockscout has indexing delays on MegaETH. Etherscan is more reliable.
+export const MEGAETH_EXPLORER = "https://mega.etherscan.io";
+
+/**
+ * MegaETH uses a multidimensional gas model:
+ *   - 21,000 compute gas  (standard EVM)
+ *   - 39,000 storage gas  (MegaETH-specific)
+ * = 60,000 minimum intrinsic gas per transaction.
+ * The RPC rejects any tx with gasLimit < 60,000 with "intrinsic gas too low".
+ * Viem's default estimation for a simple ETH transfer is 21,000 (not MegaETH-aware),
+ * so we must always override gas when sending on MegaETH.
+ */
+export const MEGAETH_MIN_GAS = 60_000n;
 
 export const megaeth = defineChain({
   id: MEGAETH_CHAIN_ID,
@@ -14,7 +26,7 @@ export const megaeth = defineChain({
     default: { http: [MEGAETH_RPC] },
   },
   blockExplorers: {
-    default: { name: "Blockscout", url: MEGAETH_EXPLORER },
+    default: { name: "Etherscan", url: MEGAETH_EXPLORER },
   },
 });
 
