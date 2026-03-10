@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import { createWalletClient, createPublicClient, custom, parseAbi } from 'viem';
+import { BrowserProviderPayer, createX402Fetch } from 'x402-megaeth-sdk';
 
 // Add type for window.ethereum
 declare global {
@@ -10,21 +10,6 @@ declare global {
 }
 
 const SERVER_URL = 'http://localhost:3402';
-
-// Manually mapping what we need rather than relying on unbuilt x402 package inside vite workspace
-const MEGAETH_CHAIN_ID = 4326;
-const USDM_ADDRESS = '0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7' as `0x${string}`;
-
-const megaeth = {
-  id: MEGAETH_CHAIN_ID,
-  name: 'MegaETH',
-  network: 'megaeth',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: {
-    default: { http: ['https://rpc.megaeth.com'] },
-    public: { http: ['https://rpc.megaeth.com'] },
-  },
-} as const;
 
 function App() {
   const [address, setAddress] = useState<string>('');
@@ -61,128 +46,20 @@ function App() {
       alert('Please connect wallet first!');
       return;
     }
+    
     setLoading(true);
     try {
-      // 1. Initial request
-      const res = await fetch(`${SERVER_URL}${endpoint}`);
-      if (res.status === 402) {
-        // We got a 402 Payment Required!
-        const paymentHeader = res.headers.get("PAYMENT-REQUIRED");
-        const required = paymentHeader ? JSON.parse(atob(paymentHeader)) : await res.json();
+      // Create payer mapped to the connected wallet
+      const payer = new BrowserProviderPayer(window.ethereum, address);
+      
+      // Wrap fetch to automatically handle 402 responses
+      const x402Fetch = createX402Fetch(payer);
 
-        console.log("Payment Required:", required);
-
-        let targetAccepts = required.accepts[0];
-
-        const walletClient = createWalletClient({
-          account: address as `0x${string}`,
-          chain: megaeth as any, // Type hack for viem 2.x
-          transport: custom(window.ethereum)
-        });
-
-        // Use public client to read nonce
-        const publicClient = createPublicClient({
-          chain: megaeth as any,
-          transport: custom(window.ethereum)
-        });
-
-        let payloadData: any;
-
-        if (targetAccepts.scheme === "exact-native") {
-          const txHash = await window.ethereum.request({
-            method: "eth_sendTransaction",
-            params: [{
-              from: address,
-              to: targetAccepts.payTo,
-              value: BigInt(targetAccepts.amount).toString(16),
-            }]
-          });
-          // Wait briefly (in reality we should wait for receipt)
-          await new Promise(r => setTimeout(r, 2000));
-
-          payloadData = {
-            txHash,
-            from: address,
-            chainId: MEGAETH_CHAIN_ID
-          };
-        } else if (targetAccepts.scheme === "permit-erc20") {
-          // 1. Get current nonce
-          const erc20Abi = parseAbi(["function nonces(address owner) view returns (uint256)"]);
-          const nonce = await publicClient.readContract({
-            address: USDM_ADDRESS,
-            abi: erc20Abi,
-            functionName: "nonces",
-            args: [address as `0x${string}`],
-          });
-
-          // 2. Set deadline (1 min from now)
-          const deadline = BigInt(Math.floor(Date.now() / 1000) + 60);
-
-          // 3. Domain
-          const domain = {
-            name: "MegaUSD",
-            version: "1",
-            chainId: MEGAETH_CHAIN_ID,
-            verifyingContract: USDM_ADDRESS,
-          } as const;
-
-          // 4. Sign typed data
-          const message = {
-            owner: address as `0x${string}`,
-            spender: targetAccepts.extra?.spender as `0x${string}`,
-            value: BigInt(targetAccepts.amount),
-            nonce: nonce as bigint,
-            deadline,
-          } as const;
-
-          const signature = await walletClient.signTypedData({
-            domain,
-            types: {
-              Permit: [
-                { name: "owner", type: "address" },
-                { name: "spender", type: "address" },
-                { name: "value", type: "uint256" },
-                { name: "nonce", type: "uint256" },
-                { name: "deadline", type: "uint256" },
-              ],
-            },
-            primaryType: "Permit",
-            message,
-          });
-
-          // Parse signature (r, s, v) -> The viem signature is a hex string (130 chars after 0x)
-          const r = signature.slice(0, 66) as `0x${string}`;
-          const s = `0x${signature.slice(66, 130)}` as `0x${string}`;
-          const vHex = signature.slice(130, 132);
-          // handle possible 00/01 v mapping to 27/28
-          let v = parseInt(vHex, 16);
-          if (v < 27) v += 27;
-
-          payloadData = {
-            from: address,
-            chainId: MEGAETH_CHAIN_ID,
-            permitSignature: { v, r, s, deadline: Number(deadline) }
-          };
-        }
-
-        const payload = {
-          x402Version: 2,
-          accepted: targetAccepts,
-          payload: payloadData
-        };
-
-        const retryRes = await fetch(`${SERVER_URL}${endpoint}`, {
-          headers: {
-            "PAYMENT-SIGNATURE": btoa(JSON.stringify(payload))
-          }
-        });
-        const finalData = await retryRes.json();
-        setData(finalData);
-
-      } else {
-        const _data = await res.json();
-        setData(_data);
-      }
+      // Make the request using our wrapped fetch!
+      const res = await x402Fetch(`${SERVER_URL}${endpoint}`);
+      const responseData = await res.json();
+      
+      setData(responseData);
     } catch (e: any) {
       console.error(e);
       alert("Error: " + e.message);
@@ -194,8 +71,8 @@ function App() {
   return (
     <>
       <div className="header">
-        <h1 className="title">x402 MegaETH</h1>
-        <p className="subtitle">Gasless ⚡ USDM & Native Micropayments</p>
+        <h1 className="title">x402 MegaETH SDK Demo</h1>
+        <p className="subtitle">Gasless ⚡ USDM & Native Micropayments in 2 lines of code</p>
       </div>
 
       <div className="wallet-status">
@@ -212,7 +89,7 @@ function App() {
       <div className="card">
         <h2>Protected Resources</h2>
         <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-          Attempt to access these APIs. The server will return 402, prompting a wallet transaction.
+          Attempt to access these APIs. The SDK will intercept the 402 and automatically pop up your wallet!
         </p>
 
         <div className="actions">

@@ -9,5 +9,4 @@ export { paymentMiddleware } from "./server/middleware.js";
 // export { PaymentVerifier } from "./server/verifier.js";
 
 // Client
-export { X402Payer } from "./client/payer.js";
-export { createX402Fetch } from "./client/fetch-wrapper.js";
+export * from "./client/index.js";

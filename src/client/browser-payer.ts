@@ -1,59 +1,91 @@
 import {
   createWalletClient,
   createPublicClient,
+  custom,
   http,
+  parseAbi,
   type WalletClient,
   type PublicClient,
   type Account,
   type Chain,
   type Transport,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { megaeth, MEGAETH_RPC, MEGAETH_CHAIN_ID, X402_VERSION, MEGAETH_MIN_GAS } from "../shared/constants.js";
+import {
+  megaeth,
+  MEGAETH_RPC,
+  MEGAETH_CHAIN_ID,
+  X402_VERSION,
+  USDM_ADDRESS
+} from "../shared/constants.js";
 import type {
   PaymentRequired,
   PaymentPayload,
-  PaymentRequirements,
 } from "../shared/types.js";
 import type { IX402Payer } from "./interfaces.js";
-
-import { parseAbi } from "viem";
-import { USDM_ADDRESS } from "../shared/constants.js";
 
 const erc20Abi = parseAbi([
   "function nonces(address owner) view returns (uint256)",
 ]);
 
-export class X402Payer implements IX402Payer {
+export class BrowserProviderPayer implements IX402Payer {
   private walletClient: WalletClient<Transport, Chain, Account>;
   private publicClient: PublicClient;
-  private account: Account;
 
-  constructor(privateKey: `0x${string}`, rpcUrl: string = MEGAETH_RPC) {
-    this.account = privateKeyToAccount(privateKey);
+  constructor(
+    private provider: any, // e.g., window.ethereum
+    public readonly address: string
+  ) {
     this.walletClient = createWalletClient({
-      account: this.account,
-      chain: megaeth,
-      transport: http(rpcUrl),
-    });
+      account: address as `0x${string}`,
+      chain: megaeth as any,
+      transport: custom(provider),
+    }) as any;
+
+    // Use a standard RPC for read calls so it works even if the user's wallet is on the wrong chain
     this.publicClient = createPublicClient({
-      chain: megaeth,
-      transport: http(rpcUrl),
-    });
+      chain: megaeth as any,
+      transport: http(MEGAETH_RPC),
+      // transport: custom(provider),
+    }) as any;
   }
 
-  get address(): string {
-    return this.account.address;
+  private async ensureCorrectChain() {
+    const chainId = await this.provider.request({ method: "eth_chainId" });
+    if (parseInt(chainId, 16) !== MEGAETH_CHAIN_ID) {
+      try {
+        await this.provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: `0x${MEGAETH_CHAIN_ID.toString(16)}` }],
+        });
+      } catch (switchError: any) {
+        // This error code indicates that the chain has not been added to MetaMask.
+        if (switchError.code === 4902) {
+          await this.provider.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: `0x${MEGAETH_CHAIN_ID.toString(16)}`,
+                chainName: "MegaETH",
+                rpcUrls: [MEGAETH_RPC],
+                nativeCurrency: megaeth.nativeCurrency,
+                blockExplorerUrls: [megaeth.blockExplorers?.default.url],
+              },
+            ],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
   }
 
   async getBalance(): Promise<bigint> {
-    return this.publicClient.getBalance({ address: this.account.address });
+    return this.publicClient.getBalance({ address: this.address as `0x${string}` });
   }
 
   async createPayment(
     paymentRequired: PaymentRequired
   ): Promise<PaymentPayload> {
-    // Prefer permit-erc20 if available, otherwise exact-native
     const accepted =
       paymentRequired.accepts.find((a) => a.scheme === "permit-erc20") ||
       paymentRequired.accepts.find((a) => a.scheme === "exact-native");
@@ -65,18 +97,18 @@ export class X402Payer implements IX402Payer {
     const amount = BigInt(accepted.amount);
 
     if (accepted.scheme === "exact-native") {
-      // MegaETH requires a minimum of 60,000 gas (21k compute + 39k storage).
-      // Viem defaults to 21,000 for a simple ETH transfer (not MegaETH-aware),
-      // which causes the RPC to silently drop the tx with "intrinsic gas too low".
-      const txHash = await this.walletClient.sendTransaction({
-        to: accepted.payTo as `0x${string}`,
-        value: amount,
-        gas: MEGAETH_MIN_GAS,
-        chain: megaeth,
+      await this.ensureCorrectChain();
+      const txHash = await this.provider.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: this.address,
+          to: accepted.payTo,
+          value: amount.toString(16),
+        }]
       });
 
-      // Wait for confirmation
-      await this.publicClient.waitForTransactionReceipt({ hash: txHash });
+      // Provide a brief wait for the tx to propagate so server sees it.
+      await new Promise(r => setTimeout(r, 2000));
 
       return {
         x402Version: X402_VERSION,
@@ -84,24 +116,21 @@ export class X402Payer implements IX402Payer {
         accepted,
         payload: {
           txHash,
-          from: this.account.address,
+          from: this.address,
           chainId: MEGAETH_CHAIN_ID,
         },
       };
     } else if (accepted.scheme === "permit-erc20" && accepted.asset === "USDM") {
-      // EIP-2612 Permit for USDM
-      // 1. Get current nonce
+      await this.ensureCorrectChain();
       const nonce = await this.publicClient.readContract({
         address: USDM_ADDRESS,
         abi: erc20Abi,
         functionName: "nonces",
-        args: [this.account.address as `0x${string}`],
+        args: [this.address as `0x${string}`],
       });
 
-      // 2. Set deadline (e.g., 1 min from now)
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 60);
 
-      // 3. Sign typed data
       const domain = {
         name: "MegaUSD",
         version: "1",
@@ -115,15 +144,14 @@ export class X402Payer implements IX402Payer {
       }
 
       const message = {
-        owner: this.account.address as `0x${string}`,
+        owner: this.address as `0x${string}`,
         spender,
         value: amount,
-        nonce,
+        nonce: nonce as bigint,
         deadline,
       } as const;
 
       const signature = await this.walletClient.signTypedData({
-        account: this.account,
         domain,
         types: {
           Permit: [
@@ -138,17 +166,18 @@ export class X402Payer implements IX402Payer {
         message,
       });
 
-      // Parse signature (r, s, v)
       const r = signature.slice(0, 66) as `0x${string}`;
       const s = `0x${signature.slice(66, 130)}` as `0x${string}`;
-      const v = parseInt(signature.slice(130, 132), 16);
+      const vHex = signature.slice(130, 132);
+      let v = parseInt(vHex, 16);
+      if (v < 27) v += 27;
 
       return {
         x402Version: X402_VERSION,
         resource: paymentRequired.resource,
         accepted,
         payload: {
-          from: this.account.address,
+          from: this.address,
           chainId: MEGAETH_CHAIN_ID,
           permitSignature: { v, r, s, deadline: Number(deadline) },
         },
