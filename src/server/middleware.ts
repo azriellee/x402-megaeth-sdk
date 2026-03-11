@@ -9,6 +9,7 @@ import {
   MEGAETH_NETWORK,
   X402_VERSION,
   DEFAULT_MAX_TIMEOUT_SECONDS,
+  DEFAULT_ETH_USD_RATE,
 } from "../shared/constants.js";
 import { parsePrice } from "../shared/price.js";
 import {
@@ -18,7 +19,7 @@ import {
 } from "../shared/headers.js";
 
 export function paymentMiddleware(config: MiddlewareConfig) {
-  const ethUsdRate = config.ethUsdRate;
+  const ethUsdRate = DEFAULT_ETH_USD_RATE;
 
   return async (req: Request, res: Response, next: NextFunction) => {
     const routeConfigOrArr = config.routes[req.path];
@@ -34,15 +35,13 @@ export function paymentMiddleware(config: MiddlewareConfig) {
     const accepts = routeConfigs.map((routeConfig) => {
       const network = routeConfig.network ?? MEGAETH_NETWORK;
       const maxTimeoutSeconds = routeConfig.maxTimeoutSeconds ?? DEFAULT_MAX_TIMEOUT_SECONDS;
-      const asset = routeConfig.asset ?? "ETH";
-      const scheme = routeConfig.scheme ?? "exact-native";
       // asset must be resolved first so parsePrice knows which decimal system to use
-      const amount = parsePrice(routeConfig.price, ethUsdRate, asset).toString();
+      const amount = parsePrice(routeConfig.price, ethUsdRate, routeConfig.asset).toString();
 
       return {
-        scheme,
+        scheme: routeConfig.scheme,
         network,
-        asset,
+        asset: routeConfig.asset,
         amount,
         payTo: routeConfig.payTo,
         maxTimeoutSeconds,

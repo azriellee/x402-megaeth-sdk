@@ -32,6 +32,8 @@ app.use(
       "/health": {
         price: "$0.002", // 0.2 cents
         payTo: SERVER_WALLET,
+        asset: "ETH",
+        scheme: "exact-native",
         description: "Health check endpoint — 0.2 cent micropayment",
       },
       "/usdm-health": {
@@ -43,7 +45,6 @@ app.use(
         extra: { spender: FACILITATOR_WALLET }, // The facilitator pays gas and transfers funds
       },
     },
-    ethUsdRate: DEFAULT_ETH_USD_RATE,
     facilitatorUrl: process.env.FACILITATOR_URL || "http://localhost:3403",
   })
 );

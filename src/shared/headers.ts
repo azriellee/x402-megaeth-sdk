@@ -1,7 +1,9 @@
 import type { PaymentRequired, PaymentPayload, SettleResponse } from "./types.js";
 
 function toBase64(obj: unknown): string {
-  const str = JSON.stringify(obj);
+  const str = JSON.stringify(obj, (key, value) =>
+    typeof value === "bigint" ? value.toString() : value
+  );
   if (typeof btoa !== "undefined") {
     // Browser environment
     return btoa(

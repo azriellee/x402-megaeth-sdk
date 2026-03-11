@@ -72,7 +72,7 @@ function App() {
     <>
       <div className="header">
         <h1 className="title">x402 MegaETH SDK Demo</h1>
-        <p className="subtitle">Gasless ⚡ USDM & Native Micropayments in 2 lines of code</p>
+        <p className="subtitle">USDM & Native ETH Micropayments</p>
       </div>
 
       <div className="wallet-status">
