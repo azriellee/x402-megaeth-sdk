@@ -1,13 +1,13 @@
-import type { X402Payer } from "./payer.js";
+import type { IX402Payer } from "./interfaces.js";
 import type { PaymentRequired } from "../shared/types.js";
-import { encodePaymentPayload } from "../shared/headers.js";
+import { encodePaymentPayload, decodePaymentRequired } from "../shared/headers.js";
 
 /**
  * Creates a fetch wrapper that automatically handles x402 Payment Required responses.
  * When a 402 is received, it sends an ETH micropayment and retries the request.
  */
 export function createX402Fetch(
-  payer: X402Payer,
+  payer: IX402Payer,
   baseFetch: typeof globalThis.fetch = globalThis.fetch
 ): typeof globalThis.fetch {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -24,9 +24,7 @@ export function createX402Fetch(
 
     const paymentHeader = response.headers.get("payment-required");
     if (paymentHeader) {
-      paymentRequired = JSON.parse(
-        Buffer.from(paymentHeader, "base64").toString("utf-8")
-      );
+      paymentRequired = decodePaymentRequired(paymentHeader);
     } else {
       // Fallback: parse from JSON body
       paymentRequired = (await response.json()) as PaymentRequired;

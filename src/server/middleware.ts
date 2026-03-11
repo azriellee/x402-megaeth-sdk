@@ -9,6 +9,7 @@ import {
   MEGAETH_NETWORK,
   X402_VERSION,
   DEFAULT_MAX_TIMEOUT_SECONDS,
+  DEFAULT_ETH_USD_RATE,
 } from "../shared/constants.js";
 import { parsePrice } from "../shared/price.js";
 import {
@@ -18,34 +19,37 @@ import {
 } from "../shared/headers.js";
 
 export function paymentMiddleware(config: MiddlewareConfig) {
-  const ethUsdRate = config.ethUsdRate;
+  const ethUsdRate = DEFAULT_ETH_USD_RATE;
 
   return async (req: Request, res: Response, next: NextFunction) => {
-    const routeConfig = config.routes[req.path];
-    if (!routeConfig) {
+    const routeConfigOrArr = config.routes[req.path];
+    if (!routeConfigOrArr) {
       return next();
     }
 
-    const network = routeConfig.network ?? MEGAETH_NETWORK;
-    const maxTimeoutSeconds =
-      routeConfig.maxTimeoutSeconds ?? DEFAULT_MAX_TIMEOUT_SECONDS;
-    const asset = routeConfig.asset ?? "ETH";
-    const scheme = routeConfig.scheme ?? "exact-native";
-    // asset must be resolved first so parsePrice knows which decimal system to use
-    const amount = parsePrice(routeConfig.price, ethUsdRate, asset).toString();
+    const routeConfigs = Array.isArray(routeConfigOrArr)
+      ? routeConfigOrArr
+      : [routeConfigOrArr];
 
-    const requirements: PaymentRequirements = {
-      scheme,
-      network,
-      asset,
-      amount,
-      payTo: routeConfig.payTo,
-      maxTimeoutSeconds,
-      ...(routeConfig.extra ? { extra: routeConfig.extra } : {}),
-    };
+    // Build accepting requirements from all configured options
+    const accepts = routeConfigs.map((routeConfig) => {
+      const network = routeConfig.network ?? MEGAETH_NETWORK;
+      const maxTimeoutSeconds = routeConfig.maxTimeoutSeconds ?? DEFAULT_MAX_TIMEOUT_SECONDS;
+      // asset must be resolved first so parsePrice knows which decimal system to use
+      const amount = parsePrice(routeConfig.price, ethUsdRate, routeConfig.asset).toString();
 
-    // Output all possible accepts, currently server handles one configured standard but could handle an array.
-    const accepts = [requirements];
+      return {
+        scheme: routeConfig.scheme,
+        network,
+        asset: routeConfig.asset,
+        amount,
+        payTo: routeConfig.payTo,
+        maxTimeoutSeconds,
+        ...(routeConfig.extra ? { extra: routeConfig.extra } : {}),
+      } as PaymentRequirements;
+    });
+
+    const routeConfig = routeConfigs[0]; // fallback for description
 
     // Check for payment header
     const paymentHeader =
@@ -83,7 +87,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ payload, requirements })
+        body: JSON.stringify({ payload, requirements: payload.accepted })
       });
 
       if (!response.ok) {

@@ -24,7 +24,7 @@ export interface PaymentRequired {
 }
 
 export interface PermitSignature {
-  v: number;
+  v: number | undefined;
   r: `0x${string}`;
   s: `0x${string}`;
   deadline: number;
@@ -53,18 +53,17 @@ export interface SettleResponse {
 export interface RouteConfig {
   price: string | number;
   payTo: string;
+  asset: "ETH" | "USDM";
+  scheme: "exact-native" | "permit-erc20";
   network?: Network;
   maxTimeoutSeconds?: number;
   description?: string;
-  asset?: "ETH" | "USDM";
-  scheme?: "exact-native" | "permit-erc20";
   extra?: Record<string, unknown>;
 }
 
-export type RoutesConfig = Record<string, RouteConfig>;
+export type RoutesConfig = Record<string, RouteConfig | RouteConfig[]>;
 
 export interface MiddlewareConfig {
   routes: RoutesConfig;
   facilitatorUrl?: string; // URL for the facilitator verification server
-  ethUsdRate?: number;
 }
