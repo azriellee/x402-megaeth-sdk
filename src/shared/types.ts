@@ -28,6 +28,9 @@ export interface PermitSignature {
   r: `0x${string}`;
   s: `0x${string}`;
   deadline: number;
+  spender: string;
+  value: string;
+  nonce: number;
 }
 
 export interface PaymentPayload {

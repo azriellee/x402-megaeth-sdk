@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import { BrowserProviderPayer, createX402Fetch } from 'x402-megaeth-sdk';
+import { Client } from 'x402-megaeth-sdk';
 
 // Add type for window.ethereum
 declare global {
@@ -50,10 +50,10 @@ function App() {
     setLoading(true);
     try {
       // Create payer mapped to the connected wallet
-      const payer = new BrowserProviderPayer(window.ethereum, address);
+      const payer = new Client.BrowserProviderPayer(window.ethereum, address);
       
       // Wrap fetch to automatically handle 402 responses
-      const x402Fetch = createX402Fetch(payer);
+      const x402Fetch = Client.createX402Fetch(payer);
 
       // Make the request using our wrapped fetch!
       const res = await x402Fetch(`${SERVER_URL}${endpoint}`);

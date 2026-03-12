@@ -141,7 +141,15 @@ export abstract class BaseX402Payer implements IX402Payer {
         payload: {
           from: this.address,
           chainId: MEGAETH_CHAIN_ID,
-          permitSignature: { v: Number(v), r, s, deadline: Number(deadline) },
+          permitSignature: {
+            v: Number(v),
+            r,
+            s,
+            deadline: Number(deadline),
+            spender,
+            value: amount.toString(),
+            nonce: Number(nonce),
+          },
         },
       };
     }

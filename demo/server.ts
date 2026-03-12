@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 import { privateKeyToAccount } from "viem/accounts";
 import { paymentMiddleware } from "../src/server/middleware.js";
-import { DEFAULT_ETH_USD_RATE } from "../src/shared/constants.js";
 
 // server and facilitator same wallet for this demo
 const PRIVATE_KEY = process.env.FACILITATOR_PRIVATE_KEY as `0x${string}`;
