@@ -130,6 +130,10 @@ export abstract class BaseX402Payer implements IX402Payer {
       // Parse signature (r, s, v)
       const { v, r, s } = parseSignature(signature);
 
+      if (v === undefined) {
+        throw new Error("Invalid signature: v is undefined");
+      }
+
       return {
         x402Version: X402_VERSION,
         resource: paymentRequired.resource,
@@ -137,7 +141,7 @@ export abstract class BaseX402Payer implements IX402Payer {
         payload: {
           from: this.address,
           chainId: MEGAETH_CHAIN_ID,
-          permitSignature: { v: v ? Number(v) : undefined, r, s, deadline: Number(deadline) },
+          permitSignature: { v: Number(v), r, s, deadline: Number(deadline) },
         },
       };
     }
