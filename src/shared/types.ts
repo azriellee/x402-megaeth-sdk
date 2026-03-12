@@ -24,7 +24,7 @@ export interface PaymentRequired {
 }
 
 export interface PermitSignature {
-  v: number | undefined;
+  v: number;
   r: `0x${string}`;
   s: `0x${string}`;
   deadline: number;

@@ -41,7 +41,7 @@ app.use(
         payTo: SERVER_WALLET,
         asset: "USDM",
         scheme: "permit-erc20",
-        description: "Health check endpoint — $5 in USDM via permit",
+        description: "Health check endpoint — 2 cent in USDM via permit",
         extra: { spender: FACILITATOR_WALLET }, // The facilitator pays gas and transfers funds
       },
     },
