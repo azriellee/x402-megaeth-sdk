@@ -10,7 +10,7 @@ Implements the [x402 protocol](https://x402.org) with a Three-Entity Architectur
 - 💰 **Dual Asset Support**: Pay with Native **ETH** or **USDM**.
 - ⛽ **Gasless for Users (USDM)**: Uses EIP-2612 Permits so the Facilitator pays the gas for USDM payments.
 - 🔌 **Plug & Play Middleware**: Protect any Express.js endpoint with one line of code.
-- 🌐 **Browser & Node Friendly**: Works with MetaMask (EIP-1193) or private keys.
+- 🌐 **Browser & Node Friendly**: Works with any EIP-1193 wallet or private keys.
 
 ---
 
@@ -21,27 +21,25 @@ The x402 flow involves a **Facilitator** that acts as a verified settlement laye
 ```
 User (Payer)             API Server                Facilitator
      |                      |                           |
-     | GET /premium         |                           |
-     |--------------------->|                           |
+     |  1. GET /resource    |                           |
+     | -------------------> |                           |
      |                      |                           |
-     | 402 Payment Required |                           |
-     |<---------------------|                           |
+     |  2. 402 Payment Req  |                           |
+     | <------------------- |                           |
      |                      |                           |
-     | [ETH Tx] or [Permit] |                           |
-     |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~>|
+     |  3. [ETH Tx] or      |                           |
+     |     [Permit Sig]     |                           |
+     | -------------------> |                           |
      |                      |                           |
-     |                      |   Verify & Settle Tx      |
-     |                      | <~~~~~~~~~~~~~~~~~~~~~~~  |
+     |                      | 4. Forward to Facilitator |
+     |                      | ------------------------> |
      |                      |                           |
-     | GET /premium         |                           |
-     | + Header: Signature  |                           |
-     |--------------------->|                           |
+     |                      |    5. Verify (ETH) &      |
+     |                      |       Settle (USDM)       |
+     |                      | <------------------------ |
      |                      |                           |
-     |                      |  Verify w/ Facilitator    |
-     |                      |-------------------------->|
-     |                      |                           |
-     | 200 OK + Content     |                           |
-     |<---------------------|                           |
+     |  6. 200 OK + Content |                           |
+     | <------------------- |                           |
 ```
 
 ---
@@ -75,7 +73,7 @@ npm run demo:server
 # Terminal 3: Node.js Client (Automated payments)
 npm run demo:client
 
-# Terminal 4: Frontend Demo (MetaMask integration)
+# Terminal 4: Frontend Demo (Frontend UI Example)
 npm run demo:frontend
 ```
 
@@ -99,6 +97,8 @@ app.use(paymentMiddleware({
     "/api/standard": {
       price: "$0.001",         // 0.1 cents in ETH
       payTo: "0xProvider...",
+      asset: "ETH",
+      scheme: "exact-native",
     },
     "/api/premium": {
       price: "$0.05",          // 5 cents in USDM
@@ -118,20 +118,29 @@ app.get("/api/premium", (req, res) => {
 });
 ```
 
-### 2. Client — Browser (MetaMask)
+### 2. Client — Browser (Frontend UI)
 
-Use `BrowserProviderPayer` to let users pay with their browser wallets.
+For frontend applications, use `BrowserProviderPayer`. You can also hook into the payment selection process if your server offers multiple payment methods (e.g., ETH and USDM).
 
 ```typescript
-import { BrowserProviderPayer, createX402Fetch } from "x402-megaeth-sdk";
+import { Client } from "x402-megaeth-sdk";
+import type { PaymentRequired, PaymentRequirements } from "x402-megaeth-sdk";
 
 // 1. Initialize with window.ethereum
-const payer = new BrowserProviderPayer(window.ethereum, userAddress);
+const payer = new Client.BrowserProviderPayer(window.ethereum, userAddress);
 
-// 2. Wrap fetch
-const x402Fetch = createX402Fetch(payer);
+// 2. Wrap fetch with an optional selection callback
+const x402Fetch = Client.createX402Fetch(payer, {
+  onPaymentRequired: (paymentRequired: PaymentRequired) => {
+    return new Promise((resolve) => {
+      // Show a UI modal to let the user choose which asset to pay with
+      // resolve(chosenRequirement) or resolve(undefined) to cancel
+      showMyCustomModal(paymentRequired.accepts, (choice) => resolve(choice));
+    });
+  }
+});
 
-// 3. Call your API normally
+// 3. Call your API — the wrapper handles retries and payments automatically
 const res = await x402Fetch("http://localhost:3402/api/premium");
 const data = await res.json();
 ```
@@ -184,6 +193,24 @@ Returns a `fetch` wrapper that:
 | Block Time | ~10ms |
 | Gas Model | 60,000 min gas per tx (intrinsic) |
 | USDM Address | `0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7` |
+
+---
+
+## The Facilitator Settlement Layer
+
+The Facilitator acts as a trusted third party that ensures the API Server receives payment before the content is released. It handles different verification logic depending on the asset:
+
+### **Native ETH (Direct Settlement)**
+1. The **User** sends ETH directly to the **Server's** wallet.
+2. The **Facilitator** verifies the transaction hash on MegaETH using an RPC provider.
+3. It checks that the recipient address, amount, and sender match the signed request.
+4. Once verified, it signals the **Server** to release the content.
+
+### **USDM (Permit Settlement)**
+1. The **User** signs an EIP-2612 Permit (off-chain signature), giving the **Facilitator** permission to move a specific amount of USDM.
+2. The **Facilitator** receives this signature and submits it to the MegaETH network.
+3. The **Facilitator** executes the `permit()` and `transferFrom()` transactions (paying the gas).
+4. Since the settlement is atomic via the Facilitator, the **User** experiences a seamless, gasless checkout.
 
 ---
 

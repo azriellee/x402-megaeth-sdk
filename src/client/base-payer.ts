@@ -14,7 +14,7 @@ import {
   MEGAETH_MIN_GAS,
   megaeth,
 } from "../shared/constants.js";
-import type { PaymentRequired, PaymentPayload } from "../shared/types.js";
+import type { PaymentRequired, PaymentPayload, PaymentRequirements } from "../shared/types.js";
 import type { IX402Payer } from "./interfaces.js";
 
 const erc20Abi = parseAbi([
@@ -36,9 +36,10 @@ export abstract class BaseX402Payer implements IX402Payer {
    */
   protected async ensureCorrectChain?(): Promise<void>;
 
-  async createPayment(paymentRequired: PaymentRequired): Promise<PaymentPayload> {
-    // Prefer permit-erc20 if available, otherwise exact-native
+  async createPayment(paymentRequired: PaymentRequired, selectedRequirement?: PaymentRequirements): Promise<PaymentPayload> {
+    // Use selection if provided, otherwise prefer permit-erc20 then exact-native
     const accepted =
+      selectedRequirement ||
       paymentRequired.accepts.find((a) => a.scheme === "permit-erc20") ||
       paymentRequired.accepts.find((a) => a.scheme === "exact-native");
 
