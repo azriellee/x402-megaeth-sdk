@@ -22,7 +22,24 @@ export function paymentMiddleware(config: MiddlewareConfig) {
   const ethUsdRate = DEFAULT_ETH_USD_RATE;
 
   return async (req: Request, res: Response, next: NextFunction) => {
-    const routeConfigOrArr = config.routes[req.path];
+    // Try exact match first
+    let routeConfigOrArr = config.routes[req.path];
+    
+    // If no exact match, try pattern matching
+    if (!routeConfigOrArr) {
+      const matchingPath = Object.keys(config.routes).find(path => {
+        if (path.includes(':')) {
+          const regexPath = path.replace(/:[^\/]+/g, '[^/]+');
+          const regex = new RegExp(`^${regexPath}$`);
+          return regex.test(req.path);
+        }
+        return false;
+      });
+      if (matchingPath) {
+        routeConfigOrArr = config.routes[matchingPath];
+      }
+    }
+
     if (!routeConfigOrArr) {
       return next();
     }
