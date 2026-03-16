@@ -18,7 +18,7 @@ function App() {
   const [data, setData] = useState<any>(null); // For general responses (health checks)
   const [articles, setArticles] = useState<any[]>([]);
   const [activeArticle, setActiveArticle] = useState<any | null>(null); // Store full article after payment
-  
+
   // Selection state
   const [selectionModal, setSelectionModal] = useState<{
     required: PaymentRequired;
@@ -61,11 +61,11 @@ function App() {
       alert('Please connect wallet first!');
       return;
     }
-    
+
     setLoading(true);
     try {
       const payer = new Client.BrowserProviderPayer(window.ethereum, address);
-      
+
       const x402Fetch = Client.createX402Fetch(payer, {
         onPaymentRequired: (paymentRequired) => {
           return new Promise((resolve) => {
@@ -81,7 +81,7 @@ function App() {
       });
 
       const res = await x402Fetch(`${SERVER_URL}${endpoint}`);
-      
+
       if (res.status === 200) {
         const responseData = await res.json();
         if (isArticle) {
@@ -125,7 +125,7 @@ function App() {
           </div>
 
           <div className="resource-content" style={{ fontSize: '1.2rem', lineHeight: '1.8', background: 'transparent', border: 'none', padding: 0 }}>
-             <p>{activeArticle.content}</p>
+            <p>{activeArticle.content}</p>
           </div>
 
           <div style={{ marginTop: '4rem', padding: '1.5rem', background: 'rgba(30, 41, 59, 0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -145,9 +145,9 @@ function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#94a3b8' }}>Transaction:</span>
-                <a 
-                  href={`https://explorer.megaeth.com/tx/${activeArticle.txHash}`} 
-                  target="_blank" 
+                <a
+                  href={`https://mega.etherscan.io/tx/${activeArticle.txHash}`}
+                  target="_blank"
                   rel="noreferrer"
                   style={{ fontFamily: 'monospace', color: '#60a5fa', textDecoration: 'none' }}
                 >
@@ -210,7 +210,7 @@ function App() {
               <span className="badge badge-usdm">2¢ USDM</span>
             </button>
           </div>
-          
+
           {data && data.status && (
             <div className="resource-content">
               <h4 style={{ margin: '0 0 0.5rem 0', color: '#60a5fa' }}>Status: {data.status}</h4>
@@ -259,11 +259,11 @@ function App() {
             <p style={{ color: '#94a3b8' }}>
               {selectionModal.required.resource.description}
             </p>
-            
+
             <div className="payment-options">
               {selectionModal.required.accepts.map((req: PaymentRequirements, idx: number) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="option-card"
                   onClick={() => selectionModal.resolve(req)}
                 >
@@ -280,8 +280,8 @@ function App() {
               ))}
             </div>
 
-            <button 
-              className="button button-outline" 
+            <button
+              className="button button-outline"
               onClick={() => selectionModal.resolve(undefined)}
               style={{ marginTop: '2rem', width: '100%' }}
             >

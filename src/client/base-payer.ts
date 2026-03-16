@@ -26,6 +26,9 @@ export abstract class BaseX402Payer implements IX402Payer {
   protected abstract publicClient: PublicClient;
   public abstract readonly address: string;
 
+  // Track nonces locally to handle back-to-back requests before they land on-chain
+  private localNonceTracker: Map<string, bigint> = new Map();
+
   async getBalance(): Promise<bigint> {
     return this.publicClient.getBalance({ address: this.address as `0x${string}` });
   }
@@ -82,15 +85,22 @@ export abstract class BaseX402Payer implements IX402Payer {
 
       // EIP-2612 Permit for USDM
       // 1. Get current nonce
-      const nonce = await this.publicClient.readContract({
+      const onChainNonce = await this.publicClient.readContract({
         address: USDM_ADDRESS,
         abi: erc20Abi,
         functionName: "nonces",
         args: [this.address as `0x${string}`],
-      });
+      }) as bigint;
 
-      // 2. Set deadline (e.g., 1 min from now)
-      const deadline = BigInt(Math.floor(Date.now() / 1000) + 60);
+      const trackerKey = `${accepted.asset}-${this.address.toLowerCase()}`;
+      const localNonce = this.localNonceTracker.get(trackerKey) ?? 0n;
+      
+      // Use the higher of the two, then increment for the next request
+      const nonce = onChainNonce > localNonce ? onChainNonce : localNonce;
+      this.localNonceTracker.set(trackerKey, nonce + 1n);
+
+      // 2. Set deadline (e.g., 5 min from now)
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
 
       // 3. Sign typed data
       const domain = {

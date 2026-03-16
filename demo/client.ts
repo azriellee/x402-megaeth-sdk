@@ -19,27 +19,27 @@ async function main() {
 
   const txHashes: string[] = [];
   const endpoints = [
-    `${SERVER_URL}/health`,
-    `${SERVER_URL}/usdm-health`,
+    // `${SERVER_URL}/health`,
+    // `${SERVER_URL}/usdm-health`,
+    `${SERVER_URL}/articles/1`,
+    `${SERVER_URL}/articles/2`,
   ];
+  const numRequests = 10;
 
   console.log("=== x402 MegaETH Micropayment Demo ===\n");
   console.log(`Payer address: ${payer.address}`);
-
-  const balance = await payer.getBalance();
-  console.log(`Wallet balance: ${formatEther(balance)} ETH`);
   console.log(`Server: ${SERVER_URL}`);
-  console.log(`Requests to make: ${endpoints.length}\n`);
+  console.log(`Requests to make: ${numRequests}\n`);
 
-  for (let i = 0; i < endpoints.length; i++) {
-    const endpoint = endpoints[i];
-    console.log(`--- Request ${i + 1}/${endpoints.length} to ${endpoint.split(SERVER_URL)[1]} ---`);
+  for (let i = 0; i < numRequests; i++) {
+    const endpoint = endpoints[i % endpoints.length];
+    console.log(`--- Request ${i + 1}/${numRequests} to ${endpoint.split(SERVER_URL)[1]} ---`);
 
     const startTime = performance.now();
     const response = await x402Fetch(endpoint);
     const data = await response.json();
-    const endTime = performance.now();
-    const durationMs = (endTime - startTime).toFixed(2);
+    const endPaymentTime = performance.now();
+    const durationMs = (endPaymentTime - startTime).toFixed(2);
 
     console.log(`Status: ${response.status} (completed in ${durationMs}ms)`);
     console.log(`Response:`, JSON.stringify(data, null, 2));
@@ -53,6 +53,11 @@ async function main() {
       console.log(`Explorer: ${MEGAETH_EXPLORER}/tx/${settlement.txHash}`);
     }
 
+    // Pause to simulate real user behavior and let chain state propagate
+    if (i < numRequests - 1) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     console.log();
   }
 
@@ -64,13 +69,6 @@ async function main() {
     console.log(`  ${i + 1}. ${hash}`);
     console.log(`     ${MEGAETH_EXPLORER}/tx/${hash}`);
   });
-
-  const balanceAfter = await payer.getBalance();
-  console.log(`\nBalance before: ${formatEther(balance)} ETH`);
-  console.log(`Balance after:  ${formatEther(balanceAfter)} ETH`);
-  console.log(
-    `Total spent:    ${formatEther(balance - balanceAfter)} ETH (includes gas)`
-  );
 }
 
 main().catch(console.error);
