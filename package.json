@@ -2,7 +2,8 @@
   "name": "x402-megaeth-sdk",
   "version": "0.1.0",
   "workspaces": [
-    "frontend-demo"
+    "frontend-demo",
+    "facilitator-server"
   ],
   "description": "x402 micropayment SDK for native ETH on MegaETH",
   "license": "MIT",
