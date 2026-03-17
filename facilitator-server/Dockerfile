@@ -1,41 +1,40 @@
 # ---- Build Stage ----
 FROM node:20-slim AS builder
 
-WORKDIR /workspace
+WORKDIR /sdk
 
-# Copy root package files for workspace resolution
-COPY package.json package-lock.json ./
-
-# Copy SDK source (needed to build the local dependency)
+# 1. Build the SDK as a standalone package (no workspaces)
+COPY package.json package-lock.json tsconfig.json tsup.config.ts ./
 COPY src/ src/
-COPY tsconfig.json tsup.config.ts ./
+# Strip workspaces from package.json so npm ci doesn't look for them
+RUN node -e "const p=require('./package.json'); delete p.workspaces; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
+RUN npm ci
+RUN npx tsup
 
-# Copy facilitator-server package
-COPY facilitator-server/ facilitator-server/
+# 2. Pack the SDK into a tarball
+RUN npm pack --pack-destination /tmp
 
-# Install all workspace dependencies & build SDK first, then facilitator
-RUN npm ci --workspace=facilitator-server --include-workspace-root \
-    && npm run build --ignore-scripts \
-    && cd facilitator-server \
-    && npm run build
+# 3. Build the facilitator-server using the packed SDK
+WORKDIR /facilitator
+COPY facilitator-server/package.json facilitator-server/tsconfig.json ./
+COPY facilitator-server/src/ src/
+# Replace the file:.. dependency with the packed tarball
+RUN node -e "const p=require('./package.json'); p.dependencies['x402-megaeth-sdk']='file:/tmp/x402-megaeth-sdk-0.1.0.tgz'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
+RUN npm install
+RUN npm run build
 
 # ---- Runtime Stage ----
 FROM node:20-slim AS runtime
 
 WORKDIR /app
 
-# Copy built SDK (facilitator-server depends on it via file:..)
-COPY --from=builder /workspace/dist/ /workspace-sdk/dist/
-COPY --from=builder /workspace/package.json /workspace-sdk/package.json
+COPY --from=builder /facilitator/dist/ ./dist/
+COPY --from=builder /facilitator/package.json ./
+COPY --from=builder /tmp/x402-megaeth-sdk-0.1.0.tgz /tmp/
 
-# Copy built facilitator-server
-COPY --from=builder /workspace/facilitator-server/dist/ ./dist/
-COPY --from=builder /workspace/facilitator-server/package.json ./
-
-# Install production-only dependencies
-# Point the file:.. reference to the copied SDK
-RUN sed -i 's|"file:.."|"file:///workspace-sdk"|' package.json \
-    && npm install --omit=dev
+# Install production dependencies only
+RUN node -e "const p=require('./package.json'); p.dependencies['x402-megaeth-sdk']='file:/tmp/x402-megaeth-sdk-0.1.0.tgz'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
+RUN npm install --omit=dev
 
 EXPOSE 3403
 
