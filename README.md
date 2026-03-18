@@ -21,7 +21,7 @@ Implements the [x402 protocol](https://x402.org) with a Three-Entity Architectur
 - **Demo API Server**: [https://skate-x402-server.up.railway.app](https://skate-x402-server.up.railway.app)
 - **Hosted Facilitator**: [https://skate-x402-facilitator.up.railway.app](https://skate-x402-facilitator.up.railway.app)
 
----
+--- 
 
 ## How It Works (Three-Entity Architecture)
 
