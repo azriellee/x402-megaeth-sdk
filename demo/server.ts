@@ -16,6 +16,7 @@ const account = privateKeyToAccount(PRIVATE_KEY);
 const SERVER_WALLET = account.address;
 
 console.log(`Server wallet (payTo): ${SERVER_WALLET}`);
+console.log(`Facilitator URL: ${process.env.FACILITATOR_URL}`);
 
 const app = express();
 app.use(cors({
@@ -143,7 +144,7 @@ app.get("/", (req, res) => {
   });
 });
 
-const PORT = 3402;
+const PORT = process.env.PORT || 3402;
 app.listen(PORT, () => {
   console.log(`x402 demo server running on http://localhost:${PORT}`);
   console.log(`Try: curl http://localhost:${PORT}/health or /usdm-health`);

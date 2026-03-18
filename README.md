@@ -44,39 +44,13 @@ User (Payer)             API Server                Facilitator
 
 ---
 
-## Monorepo Setup
-
-This repository is organized as an **NPM Workspace**.
-
-### 1. Install Dependencies
-```bash
-# Run from the root
-npm install
-```
-
-### 2. Build the SDK
-```bash
-# Builds the SDK and the Frontend Demo
-npm run build
-```
-
-### 3. Run the Demos
-To see x402 in action, start the three core components:
+## Installation
 
 ```bash
-# Terminal 1: Facilitator (Settlement Server)
-npm run demo:facilitator
-
-# Terminal 2: API Server (The Resource Owner)
-npm run demo:server
-
-# Terminal 3: Node.js Client (Automated payments)
-npm run demo:client
-
-# Terminal 4: Frontend Demo (Frontend UI Example)
-npm run demo:frontend
+npm install x402-megaeth-sdk
 ```
 
+*Note: `express` is required as a peer dependency if you are using the server middleware. `viem` is required for client-side wallet interactions.*
 ---
 
 ## Integration Guide
@@ -92,7 +66,7 @@ import { paymentMiddleware } from "x402-megaeth-sdk";
 const app = express();
 
 app.use(paymentMiddleware({
-  facilitatorUrl: "http://localhost:3403",
+  // facilitatorUrl points to our hosted verifier by default!
   routes: {
     "/api/standard": {
       price: "$0.001",         // 0.1 cents in ETH
@@ -105,7 +79,6 @@ app.use(paymentMiddleware({
       asset: "USDM",
       scheme: "permit-erc20",
       payTo: "0xProvider...",
-      extra: { spender: "0xFacilitator..." }
     },
   },
 }));

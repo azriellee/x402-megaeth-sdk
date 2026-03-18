@@ -20,6 +20,11 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -28,6 +33,7 @@
     }
   },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "tsup && npm run build --workspaces --if-present",
     "demo:facilitator": "tsx demo/facilitator.ts",
     "demo:server": "tsx demo/server.ts",
