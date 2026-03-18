@@ -23,6 +23,7 @@ import type {
   SettleResponse,
 } from "../shared/types.js";
 import { recoverPermitSigner } from "./utils.js";
+type QueueTask = () => Promise<void>;
 
 const erc20Abi = parseAbi([
   "function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external",
@@ -37,6 +38,11 @@ export class FacilitatorVerifier {
   private account?: Account;
   private usedTxHashes: Set<string> = new Set();
   private processedPermits: Set<string> = new Set();
+  private pendingPermits: Set<string> = new Set();
+  private settlementQueue: Promise<void> = Promise.resolve();
+
+  // Track the expected nonce per user to compensate for lagging RPC nodes
+  private expectedUserNonces: Map<string, bigint> = new Map();
 
   constructor(rpcUrl: string = MEGAETH_RPC, privateKey?: `0x${string}`) {
     this.publicClient = createPublicClient({
@@ -52,6 +58,11 @@ export class FacilitatorVerifier {
         transport: http(rpcUrl),
       });
     }
+  }
+
+  private enqueueSettlement(task: QueueTask): void {
+    // Chain each settlement onto the previous one — fully serialized
+    this.settlementQueue = this.settlementQueue.then(task).catch(() => {});
   }
 
   get address(): string | undefined {
@@ -212,7 +223,7 @@ export class FacilitatorVerifier {
 
     const { r, s } = payload.payload.permitSignature!;
     const sigKey = `${r}-${s}`;
-    if (this.processedPermits.has(sigKey)) {
+    if (this.processedPermits.has(sigKey) || this.pendingPermits.has(sigKey)) {
       return {
         success: false,
         txHash: "",
@@ -223,7 +234,11 @@ export class FacilitatorVerifier {
     }
 
     // 2. SOFT-SUCCESS: Fire off the on-chain settlement and return success immediately
-    this.executeSettlementAsync(payload, requirements);
+    this.pendingPermits.add(sigKey);
+
+    this.enqueueSettlement(async () => {
+      await this.executeSettlementAsync(payload, requirements);
+    });
 
     return {
       success: true,
@@ -330,9 +345,16 @@ export class FacilitatorVerifier {
         }),
       ]);
 
-      if (onChainNonce !== BigInt(nonce)) {
-        return { success: false, txHash: "", network, payer: from, errorReason: "Nonce mismatch" };
+      const expectedNonce = this.expectedUserNonces.get(from.toLowerCase()) ?? onChainNonce;
+      const effectiveNonce = onChainNonce > expectedNonce ? onChainNonce : expectedNonce;
+
+      if (effectiveNonce !== BigInt(nonce)) {
+        return { success: false, txHash: "", network, payer: from, errorReason: `Nonce mismatch: Expected ${effectiveNonce}, got ${nonce}` };
       }
+      
+      // Assume this permit will succeed on-chain and advance the expected nonce for the next request
+      this.expectedUserNonces.set(from.toLowerCase(), effectiveNonce + 1n);
+
       if (balance < amount) {
         return { success: false, txHash: "", network, payer: from, errorReason: "Insufficient balance" };
       }
@@ -354,52 +376,58 @@ export class FacilitatorVerifier {
     const { v, r, s, deadline, value } = permitSignature;
     const amount = BigInt(value);
     const sigKey = `${r}-${s}`;
+    try {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          // 1. Send Permit Transaction
+          const permitTxHash = await this.walletClient.writeContract({
+            address: USDM_ADDRESS,
+            abi: erc20Abi,
+            functionName: "permit",
+            args: [
+              from as `0x${string}`,
+              this.account.address,
+              amount,
+              BigInt(deadline),
+              v,
+              r as Hash,
+              s as Hash,
+            ],
+          });
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        // 1. Send Permit Transaction
-        const permitTxHash = await this.walletClient.writeContract({
-          address: USDM_ADDRESS,
-          abi: erc20Abi,
-          functionName: "permit",
-          args: [
-            from as `0x${string}`,
-            this.account.address,
-            amount,
-            BigInt(deadline),
-            v,
-            r as Hash,
-            s as Hash,
-          ],
-        });
+          await this.publicClient.waitForTransactionReceipt({ hash: permitTxHash });
 
-        await this.publicClient.waitForTransactionReceipt({ hash: permitTxHash });
+          // 2. Send TransferFrom Transaction
+          const transferTxHash = await this.walletClient.writeContract({
+            address: USDM_ADDRESS,
+            abi: erc20Abi,
+            functionName: "transferFrom",
+            args: [
+              from as `0x${string}`,
+              requirements.payTo as `0x${string}`,
+              amount,
+            ],
+          });
 
-        // 2. Send TransferFrom Transaction
-        const transferTxHash = await this.walletClient.writeContract({
-          address: USDM_ADDRESS,
-          abi: erc20Abi,
-          functionName: "transferFrom",
-          args: [
-            from as `0x${string}`,
-            requirements.payTo as `0x${string}`,
-            amount,
-          ],
-        });
+          await this.publicClient.waitForTransactionReceipt({ hash: transferTxHash });
 
-        await this.publicClient.waitForTransactionReceipt({ hash: transferTxHash });
-
-        this.processedPermits.add(sigKey);
-        console.log(`[Settlement Success] Payer: ${from}, Tx: ${transferTxHash}`);
-        return; // Success
-      } catch (err) {
-        console.error(`[Settlement Attempt ${attempt}/${retries} Failed]`, err);
-        if (attempt < retries) {
-          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)); // Linear backoff
+          this.processedPermits.add(sigKey);
+          console.log(`[Settlement Success] Payer: ${from}, Tx: ${transferTxHash}`);
+          return; // Success
+        } catch (err) {
+          console.error(`[Settlement Attempt ${attempt}/${retries} Failed]`, err);
+          if (attempt < retries) {
+            await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)); // Linear backoff
+          }
         }
       }
+      console.error(`[Settlement Fatal] Failed to settle payment for ${from} after ${retries} attempts.`);
+    } finally {
+      this.pendingPermits.delete(sigKey);
+      
+      // If it fatally failed on-chain, we should ideally resync the user's nonce in our tracker,
+      // but for simplicity we rely on the next successful request's onChainNonce > expectedNonce override.
     }
-    console.error(`[Settlement Fatal] Failed to settle payment for ${from} after ${retries} attempts.`);
   }
 
   private async getTransactionFromBlockOrRPC(

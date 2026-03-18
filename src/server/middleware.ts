@@ -55,6 +55,11 @@ export function paymentMiddleware(config: MiddlewareConfig) {
       // asset must be resolved first so parsePrice knows which decimal system to use
       const amount = parsePrice(routeConfig.price, ethUsdRate, routeConfig.asset).toString();
 
+      const extra = { ...routeConfig.extra };
+      if (routeConfig.scheme === "permit-erc20" && !extra.spender) {
+        extra.spender = "0x0305362E71a3f5cDdBE5539DD10d067Fd8A73252";
+      }
+
       return {
         scheme: routeConfig.scheme,
         network,
@@ -62,7 +67,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
         amount,
         payTo: routeConfig.payTo,
         maxTimeoutSeconds,
-        ...(routeConfig.extra ? { extra: routeConfig.extra } : {}),
+        ...(Object.keys(extra).length > 0 ? { extra } : {}),
       } as PaymentRequirements;
     });
 
@@ -95,11 +100,9 @@ export function paymentMiddleware(config: MiddlewareConfig) {
     try {
       const payload = decodePaymentPayload(paymentHeader);
 
-      if (!config.facilitatorUrl) {
-        throw new Error("facilitatorUrl is not configured");
-      }
+      const facilitatorUrl = config.facilitatorUrl || "https://skate-x402-facilitator.up.railway.app";
 
-      const response = await fetch(`${config.facilitatorUrl}/verify`, {
+      const response = await fetch(`${facilitatorUrl}/verify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

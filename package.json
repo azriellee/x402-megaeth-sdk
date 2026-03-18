@@ -2,9 +2,14 @@
   "name": "x402-megaeth-sdk",
   "version": "0.1.0",
   "workspaces": [
-    "frontend-demo"
+    "frontend-demo",
+    "facilitator-server"
   ],
   "description": "x402 micropayment SDK for native ETH on MegaETH",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azriellee/x402-megaeth-sdk.git"
+  },
   "license": "MIT",
   "keywords": [
     "x402",
@@ -19,6 +24,11 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -27,6 +37,7 @@
     }
   },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "tsup && npm run build --workspaces --if-present",
     "demo:facilitator": "tsx demo/facilitator.ts",
     "demo:server": "tsx demo/server.ts",

@@ -14,6 +14,15 @@ Implements the [x402 protocol](https://x402.org) with a Three-Entity Architectur
 
 ---
 
+## Live Demo & Resources
+
+- **Source Code**: [GitHub](https://github.com/azriellee/x402-megaeth-sdk)
+- **Frontend Demo UI**: [https://skate-x402-frontend.up.railway.app](https://skate-x402-frontend.up.railway.app)
+- **Demo API Server**: [https://skate-x402-server.up.railway.app](https://skate-x402-server.up.railway.app)
+- **Hosted Facilitator**: [https://skate-x402-facilitator.up.railway.app](https://skate-x402-facilitator.up.railway.app)
+
+---
+
 ## How It Works (Three-Entity Architecture)
 
 The x402 flow involves a **Facilitator** that acts as a verified settlement layer between the User and the API Server.
@@ -44,38 +53,13 @@ User (Payer)             API Server                Facilitator
 
 ---
 
-## Monorepo Setup
-
-This repository is organized as an **NPM Workspace**.
-
-### 1. Install Dependencies
-```bash
-# Run from the root
-npm install
-```
-
-### 2. Build the SDK
-```bash
-# Builds the SDK and the Frontend Demo
-npm run build
-```
-
-### 3. Run the Demos
-To see x402 in action, start the three core components:
+## Installation
 
 ```bash
-# Terminal 1: Facilitator (Settlement Server)
-npm run demo:facilitator
-
-# Terminal 2: API Server (The Resource Owner)
-npm run demo:server
-
-# Terminal 3: Node.js Client (Automated payments)
-npm run demo:client
-
-# Terminal 4: Frontend Demo (Frontend UI Example)
-npm run demo:frontend
+npm install x402-megaeth-sdk
 ```
+
+<sub>*Note: `express` is required as a peer dependency if you are using the server middleware. `viem` is required for client-side wallet interactions.*</sub>
 
 ---
 
@@ -92,7 +76,6 @@ import { paymentMiddleware } from "x402-megaeth-sdk";
 const app = express();
 
 app.use(paymentMiddleware({
-  facilitatorUrl: "http://localhost:3403",
   routes: {
     "/api/standard": {
       price: "$0.001",         // 0.1 cents in ETH
@@ -105,9 +88,9 @@ app.use(paymentMiddleware({
       asset: "USDM",
       scheme: "permit-erc20",
       payTo: "0xProvider...",
-      extra: { spender: "0xFacilitator..." }
     },
   },
+  // facilitatorUrl: "https://skate-facilitator.up.railway.app",  leave option blank to use facilitator set up by skate
 }));
 
 app.get("/api/premium", (req, res) => {
