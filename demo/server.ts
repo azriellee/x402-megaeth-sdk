@@ -81,7 +81,7 @@ app.use(
         }
       ]
     },
-    facilitatorUrl: process.env.FACILITATOR_URL || "http://localhost:3403",
+    // facilitatorUrl: "https://skate-facilitator.up.railway.app",  leave option blank to use facilitator set up by skate
   })
 );
 
