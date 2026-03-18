@@ -81,7 +81,7 @@ app.use(
         }
       ]
     },
-    // facilitatorUrl: "https://skate-facilitator.up.railway.app",  leave option blank to use facilitator set up by skate
+    // facilitatorUrl: "https://skate-x402-facilitator.up.railway.app",  leave option blank to use facilitator set up by skate
   })
 );
 

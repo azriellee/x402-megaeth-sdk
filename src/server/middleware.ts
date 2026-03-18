@@ -100,7 +100,7 @@ export function paymentMiddleware(config: MiddlewareConfig) {
     try {
       const payload = decodePaymentPayload(paymentHeader);
 
-      const facilitatorUrl = config.facilitatorUrl || "https://skate-facilitator.up.railway.app";
+      const facilitatorUrl = config.facilitatorUrl || "https://skate-x402-facilitator.up.railway.app";
 
       const response = await fetch(`${facilitatorUrl}/verify`, {
         method: "POST",

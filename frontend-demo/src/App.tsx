@@ -10,7 +10,7 @@ declare global {
   }
 }
 
-const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3402';
+const SERVER_URL = import.meta.env.VITE_API_URL || 'https://skate-x402-server.up.railway.app';
 
 function App() {
   const [address, setAddress] = useState<string>('');

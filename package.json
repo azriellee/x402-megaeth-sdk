@@ -6,6 +6,10 @@
     "facilitator-server"
   ],
   "description": "x402 micropayment SDK for native ETH on MegaETH",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azriellee/x402-megaeth-sdk.git"
+  },
   "license": "MIT",
   "keywords": [
     "x402",

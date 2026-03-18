@@ -14,6 +14,15 @@ Implements the [x402 protocol](https://x402.org) with a Three-Entity Architectur
 
 ---
 
+## Live Demo & Resources
+
+- **Source Code**: [GitHub](https://github.com/azriellee/x402-megaeth-sdk)
+- **Frontend Demo UI**: [https://skate-x402-frontend.up.railway.app](https://skate-x402-frontend.up.railway.app)
+- **Demo API Server**: [https://skate-x402-server.up.railway.app](https://skate-x402-server.up.railway.app)
+- **Hosted Facilitator**: [https://skate-x402-facilitator.up.railway.app](https://skate-x402-facilitator.up.railway.app)
+
+---
+
 ## How It Works (Three-Entity Architecture)
 
 The x402 flow involves a **Facilitator** that acts as a verified settlement layer between the User and the API Server.
@@ -50,7 +59,8 @@ User (Payer)             API Server                Facilitator
 npm install x402-megaeth-sdk
 ```
 
-*Note: `express` is required as a peer dependency if you are using the server middleware. `viem` is required for client-side wallet interactions.*
+<sub>*Note: `express` is required as a peer dependency if you are using the server middleware. `viem` is required for client-side wallet interactions.*</sub>
+
 ---
 
 ## Integration Guide
@@ -66,7 +76,6 @@ import { paymentMiddleware } from "x402-megaeth-sdk";
 const app = express();
 
 app.use(paymentMiddleware({
-  // facilitatorUrl points to our hosted verifier by default!
   routes: {
     "/api/standard": {
       price: "$0.001",         // 0.1 cents in ETH
@@ -81,6 +90,7 @@ app.use(paymentMiddleware({
       payTo: "0xProvider...",
     },
   },
+  // facilitatorUrl: "https://skate-facilitator.up.railway.app",  leave option blank to use facilitator set up by skate
 }));
 
 app.get("/api/premium", (req, res) => {
