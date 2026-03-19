@@ -11,15 +11,12 @@ RUN node -e "const p=require('./package.json'); delete p.workspaces; require('fs
 RUN npm ci
 RUN npx tsup
 
-# 2. Pack the SDK into a tarball
-RUN npm pack --pack-destination /tmp
-
-# 3. Build the facilitator-server using the packed SDK
+# 2. Build the facilitator-server using the built SDK directly
 WORKDIR /facilitator
 COPY facilitator-server/package.json facilitator-server/tsconfig.json ./
 COPY facilitator-server/src/ src/
-# Replace the file:.. dependency with the packed tarball
-RUN node -e "const p=require('./package.json'); p.dependencies['x402-megaeth-sdk']='file:/tmp/x402-megaeth-sdk-0.1.0.tgz'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
+# Point dependency at the built SDK directory (no tarball needed)
+RUN node -e "const p=require('./package.json'); p.dependencies['x402-megaeth-sdk']='file:/sdk'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
 RUN npm install
 RUN npm run build
 
@@ -30,10 +27,11 @@ WORKDIR /app
 
 COPY --from=builder /facilitator/dist/ ./dist/
 COPY --from=builder /facilitator/package.json ./
-COPY --from=builder /tmp/x402-megaeth-sdk-0.1.0.tgz /tmp/
+# Copy the built SDK for runtime resolution
+COPY --from=builder /sdk/ /sdk/
 
 # Install production dependencies only
-RUN node -e "const p=require('./package.json'); p.dependencies['x402-megaeth-sdk']='file:/tmp/x402-megaeth-sdk-0.1.0.tgz'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
+RUN node -e "const p=require('./package.json'); p.dependencies['x402-megaeth-sdk']='file:/sdk'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
 RUN npm install --omit=dev
 
 EXPOSE 3403
