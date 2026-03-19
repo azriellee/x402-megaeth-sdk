@@ -64,7 +64,13 @@ export interface RouteConfig {
   extra?: Record<string, unknown>;
 }
 
-export type RoutesConfig = Record<string, RouteConfig | RouteConfig[]>;
+/**
+ * A resolver function that returns route config(s) dynamically per request.
+ * Return `null` to skip payment for this request (e.g. resource not found).
+ */
+export type RouteConfigResolver = (req: any) => RouteConfig | RouteConfig[] | null;
+
+export type RoutesConfig = Record<string, RouteConfig | RouteConfig[] | RouteConfigResolver>;
 
 export interface MiddlewareConfig {
   routes: RoutesConfig;

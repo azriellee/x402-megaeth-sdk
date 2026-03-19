@@ -44,6 +44,13 @@ export function paymentMiddleware(config: MiddlewareConfig) {
       return next();
     }
 
+    // Resolve function-based route configs (for dynamic pricing, etc.)
+    if (typeof routeConfigOrArr === "function") {
+      const resolved = routeConfigOrArr(req);
+      if (!resolved) return next();
+      routeConfigOrArr = resolved;
+    }
+
     const routeConfigs = Array.isArray(routeConfigOrArr)
       ? routeConfigOrArr
       : [routeConfigOrArr];
