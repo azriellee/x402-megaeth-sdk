@@ -71,11 +71,11 @@ Add the `paymentMiddleware` to your Express app. You can configure different pri
 
 ```typescript
 import express from "express";
-import { paymentMiddleware } from "x402-megaeth-sdk";
+import { Server } from "x402-megaeth-sdk";
 
 const app = express();
 
-app.use(paymentMiddleware({
+app.use(Server.paymentMiddleware({
   routes: {
     "/api/standard": {
       price: "$0.001",         // 0.1 cents in ETH
@@ -133,10 +133,10 @@ const data = await res.json();
 Use `X402Payer` for automated agents or backend-to-backend micropayments.
 
 ```typescript
-import { X402Payer, createX402Fetch } from "x402-megaeth-sdk";
+import { Client } from "x402-megaeth-sdk";
 
-const payer = new X402Payer("0xYourPrivateKey");
-const x402Fetch = createX402Fetch(payer);
+const payer = new Client.X402Payer("0xYourPrivateKey");
+const x402Fetch = Client.createX402Fetch(payer);
 
 const res = await x402Fetch("http://localhost:3402/api/premium");
 ```
