@@ -1,0 +1,435 @@
+{
+  "version": "35.0.0",
+  "artifacts": {
+    "X402FacilitatorService.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "X402FacilitatorService.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "X402FacilitatorService": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://276671279160/ap-southeast-1",
+      "properties": {
+        "templateFile": "X402FacilitatorService.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::276671279160:role/cdk-hnb659fds-deploy-role-276671279160-ap-southeast-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::276671279160:role/cdk-hnb659fds-cfn-exec-role-276671279160-ap-southeast-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-276671279160-ap-southeast-1/8fbf05c8aaaa429a61bbd8995d3acb00d5f64bd9ed2858f9589ebb1c2f6ee1b4.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "X402FacilitatorService.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::276671279160:role/cdk-hnb659fds-lookup-role-276671279160-ap-southeast-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "X402FacilitatorService.assets"
+      ],
+      "metadata": {
+        "/X402FacilitatorService/Service/ImportedVpc": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "fromVpcAttributes: 'availabilityZones' is a list token: the imported VPC will not work with constructs that require a list of subnets at synthesis time. Use 'Vpc.fromLookup()' or 'Fn.importListValue' instead. [ack: @aws-cdk/aws-ec2:vpcAttributeIsListTokenavailabilityZones]",
+            "trace": [
+              "Annotations.addMessage (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1526)",
+              "Annotations.addWarningV2 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedVpc (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:27352)",
+              "Function.fromVpcAttributes (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:7886)",
+              "new X402FacilitatorService (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator-service.ts:35:25)",
+              "new X402FacilitatorStack (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator.stack.ts:14:5)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/bin/infra.ts:9:1)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Module.m._compile (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1618:23)",
+              "Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Object.require.extensions.<computed> [as .ts] (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1621:12)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "phase4 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:649:14)",
+              "bootstrap (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:95:10)",
+              "main (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:55:10)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:800:3)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Object.Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "node:internal/main/run_main_module:28:49"
+            ]
+          },
+          {
+            "type": "aws:cdk:warning",
+            "data": "fromVpcAttributes: 'publicSubnetIds' is a list token: the imported VPC will not work with constructs that require a list of subnets at synthesis time. Use 'Vpc.fromLookup()' or 'Fn.importListValue' instead. [ack: @aws-cdk/aws-ec2:vpcAttributeIsListTokenpublicSubnetIds]",
+            "trace": [
+              "Annotations.addMessage (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1526)",
+              "Annotations.addWarningV2 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedVpc (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:27352)",
+              "Function.fromVpcAttributes (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:7886)",
+              "new X402FacilitatorService (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator-service.ts:35:25)",
+              "new X402FacilitatorStack (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator.stack.ts:14:5)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/bin/infra.ts:9:1)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Module.m._compile (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1618:23)",
+              "Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Object.require.extensions.<computed> [as .ts] (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1621:12)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "phase4 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:649:14)",
+              "bootstrap (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:95:10)",
+              "main (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:55:10)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:800:3)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Object.Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "node:internal/main/run_main_module:28:49"
+            ]
+          },
+          {
+            "type": "aws:cdk:warning",
+            "data": "fromVpcAttributes: 'isolatedSubnetIds' is a list token: the imported VPC will not work with constructs that require a list of subnets at synthesis time. Use 'Vpc.fromLookup()' or 'Fn.importListValue' instead. [ack: @aws-cdk/aws-ec2:vpcAttributeIsListTokenisolatedSubnetIds]",
+            "trace": [
+              "Annotations.addMessage (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1526)",
+              "Annotations.addWarningV2 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedVpc (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:27352)",
+              "Function.fromVpcAttributes (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:7886)",
+              "new X402FacilitatorService (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator-service.ts:35:25)",
+              "new X402FacilitatorStack (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator.stack.ts:14:5)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/bin/infra.ts:9:1)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Module.m._compile (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1618:23)",
+              "Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Object.require.extensions.<computed> [as .ts] (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1621:12)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "phase4 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:649:14)",
+              "bootstrap (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:95:10)",
+              "main (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:55:10)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:800:3)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Object.Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "node:internal/main/run_main_module:28:49"
+            ]
+          }
+        ],
+        "/X402FacilitatorService/Service/ImportedVpc/PublicSubnet1": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "No routeTableId was provided to the subnet at 'X402FacilitatorService/Service/ImportedVpc/PublicSubnet1'. Attempting to read its .routeTable.routeTableId will return null/undefined. (More info: https://github.com/aws/aws-cdk/pull/3171) [ack: @aws-cdk/aws-ec2:noSubnetRouteTableId]",
+            "trace": [
+              "Annotations.addMessage (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1526)",
+              "Annotations.addWarningV2 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedSubnet (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:31480)",
+              "Function.fromSubnetAttributes (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:20143)",
+              "/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2221",
+              "Array.map (<anonymous>)",
+              "ImportSubnetGroup.import (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2139)",
+              "new ImportedVpc (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:28546)",
+              "Function.fromVpcAttributes (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:7886)",
+              "new X402FacilitatorService (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator-service.ts:35:25)",
+              "new X402FacilitatorStack (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator.stack.ts:14:5)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/bin/infra.ts:9:1)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Module.m._compile (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1618:23)",
+              "Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Object.require.extensions.<computed> [as .ts] (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1621:12)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "phase4 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:649:14)",
+              "bootstrap (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:95:10)",
+              "main (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:55:10)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:800:3)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Object.Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "node:internal/main/run_main_module:28:49"
+            ]
+          }
+        ],
+        "/X402FacilitatorService/Service/ImportedVpc/IsolatedSubnet1": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "No routeTableId was provided to the subnet at 'X402FacilitatorService/Service/ImportedVpc/IsolatedSubnet1'. Attempting to read its .routeTable.routeTableId will return null/undefined. (More info: https://github.com/aws/aws-cdk/pull/3171) [ack: @aws-cdk/aws-ec2:noSubnetRouteTableId]",
+            "trace": [
+              "Annotations.addMessage (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1526)",
+              "Annotations.addWarningV2 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedSubnet (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:31480)",
+              "Function.fromSubnetAttributes (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:20143)",
+              "/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2221",
+              "Array.map (<anonymous>)",
+              "ImportSubnetGroup.import (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2139)",
+              "new ImportedVpc (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:28622)",
+              "Function.fromVpcAttributes (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:7886)",
+              "new X402FacilitatorService (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator-service.ts:35:25)",
+              "new X402FacilitatorStack (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/lib/facilitator.stack.ts:14:5)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/bin/infra.ts:9:1)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Module.m._compile (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1618:23)",
+              "Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Object.require.extensions.<computed> [as .ts] (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/index.ts:1621:12)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "phase4 (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:649:14)",
+              "bootstrap (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:95:10)",
+              "main (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:55:10)",
+              "Object.<anonymous> (/home/azriel/skate/x402-megaeth-sdk/facilitator-server/infra/node_modules/ts-node/src/bin.ts:800:3)",
+              "Module._compile (node:internal/modules/cjs/loader:1521:14)",
+              "Object.Module._extensions..js (node:internal/modules/cjs/loader:1623:10)",
+              "Module.load (node:internal/modules/cjs/loader:1266:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1091:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)",
+              "node:internal/main/run_main_module:28:49"
+            ]
+          }
+        ],
+        "/X402FacilitatorService/Service/ImportedSG/from X402FacilitatorServiceFargateSG61D6D1D6:6379": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceImportedSGfromX402FacilitatorServiceFargateSG61D6D1D6637935B3F236"
+          }
+        ],
+        "/X402FacilitatorService/Service/ImportedSG/from X402FacilitatorServiceALBSecurityGroup83650961:3403": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceImportedSGfromX402FacilitatorServiceALBSecurityGroup836509613403355A4618"
+          }
+        ],
+        "/X402FacilitatorService/Service/UsedTxHashes": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ServiceUsedTxHashes2DA5941D"
+            }
+          }
+        ],
+        "/X402FacilitatorService/Service/UsedTxHashes/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceUsedTxHashes2DA5941D"
+          }
+        ],
+        "/X402FacilitatorService/Service/ProcessedPermits": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ServiceProcessedPermits81235CC7"
+            }
+          }
+        ],
+        "/X402FacilitatorService/Service/ProcessedPermits/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceProcessedPermits81235CC7"
+          }
+        ],
+        "/X402FacilitatorService/Service/SettlementStats": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ServiceSettlementStats8783C554"
+            }
+          }
+        ],
+        "/X402FacilitatorService/Service/SettlementStats/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceSettlementStats8783C554"
+          }
+        ],
+        "/X402FacilitatorService/Service/Cluster/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceCluster572F72F1"
+          }
+        ],
+        "/X402FacilitatorService/Service/LogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceLogGroupB910EE76"
+          }
+        ],
+        "/X402FacilitatorService/Service/TaskDef/TaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceTaskDefTaskRole0CFE2F57"
+          }
+        ],
+        "/X402FacilitatorService/Service/TaskDef/TaskRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceTaskDefTaskRoleDefaultPolicy9CCB4F8E"
+          }
+        ],
+        "/X402FacilitatorService/Service/TaskDef/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceTaskDef1922A00F"
+          }
+        ],
+        "/X402FacilitatorService/Service/TaskDef/ExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceTaskDefExecutionRole919F7BE3"
+          }
+        ],
+        "/X402FacilitatorService/Service/TaskDef/ExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceTaskDefExecutionRoleDefaultPolicy3073559D"
+          }
+        ],
+        "/X402FacilitatorService/Service/FargateSG/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceFargateSG470FF934"
+          }
+        ],
+        "/X402FacilitatorService/Service/FargateSG/from X402FacilitatorServiceALBSecurityGroup83650961:3403": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceFargateSGfromX402FacilitatorServiceALBSecurityGroup836509613403E10B6786"
+          }
+        ],
+        "/X402FacilitatorService/Service/FargateService/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceFargateServiceA8461C4D"
+          }
+        ],
+        "/X402FacilitatorService/Service/ALB/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceALB6B39C067"
+          }
+        ],
+        "/X402FacilitatorService/Service/ALB/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceALBSecurityGroupD744A262"
+          }
+        ],
+        "/X402FacilitatorService/Service/ALB/SecurityGroup/to X402FacilitatorServiceFargateSG61D6D1D6:3403": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceALBSecurityGrouptoX402FacilitatorServiceFargateSG61D6D1D63403CF923376"
+          }
+        ],
+        "/X402FacilitatorService/Service/ALB/SecurityGroup/to X402FacilitatorServiceImportedSG58794D5F:3403": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceALBSecurityGrouptoX402FacilitatorServiceImportedSG58794D5F340384D75E31"
+          }
+        ],
+        "/X402FacilitatorService/Service/ALB/HttpListener/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceALBHttpListenerB0D86247"
+          }
+        ],
+        "/X402FacilitatorService/Service/ALB/HttpListener/FargateTargetGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceALBHttpListenerFargateTargetGroupD7B6BF37"
+          }
+        ],
+        "/X402FacilitatorService/Service/HttpApi": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceHttpApiA462ABFF"
+          }
+        ],
+        "/X402FacilitatorService/Service/VpcLink": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceVpcLink71FE8214"
+          }
+        ],
+        "/X402FacilitatorService/Service/AlbIntegration": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceAlbIntegration6FA2A1D0"
+          }
+        ],
+        "/X402FacilitatorService/Service/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceDefaultRoute8A51FDE6"
+          }
+        ],
+        "/X402FacilitatorService/Service/DefaultStage": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceDefaultStage8485C6BA"
+          }
+        ],
+        "/X402FacilitatorService/Service/FacilitatorUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceFacilitatorUrlDAC046E1"
+          }
+        ],
+        "/X402FacilitatorService/Service/TxHashesTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceTxHashesTableName7103FC3F"
+          }
+        ],
+        "/X402FacilitatorService/Service/PermitsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServicePermitsTableName65EAD875"
+          }
+        ],
+        "/X402FacilitatorService/Service/StatsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServiceStatsTableName04C58A90"
+          }
+        ],
+        "/X402FacilitatorService/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/X402FacilitatorService/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/X402FacilitatorService/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "X402FacilitatorService"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}

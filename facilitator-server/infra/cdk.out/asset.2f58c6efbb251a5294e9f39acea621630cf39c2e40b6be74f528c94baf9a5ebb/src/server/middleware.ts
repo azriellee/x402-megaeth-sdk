@@ -1,0 +1,161 @@
+import type { Request, Response, NextFunction } from "express";
+import type {
+  MiddlewareConfig,
+  PaymentRequired,
+  PaymentRequirements,
+  SettleResponse,
+} from "../shared/types.js";
+import {
+  MEGAETH_NETWORK,
+  X402_VERSION,
+  DEFAULT_MAX_TIMEOUT_SECONDS,
+  DEFAULT_ETH_USD_RATE,
+} from "../shared/constants.js";
+import { parsePrice } from "../shared/price.js";
+import {
+  encodePaymentRequired,
+  decodePaymentPayload,
+  encodeSettleResponse,
+} from "../shared/headers.js";
+
+export function paymentMiddleware(config: MiddlewareConfig) {
+  const ethUsdRate = DEFAULT_ETH_USD_RATE;
+
+  return async (req: Request, res: Response, next: NextFunction) => {
+    // Try exact match first
+    let routeConfigOrArr = config.routes[req.path];
+    
+    // If no exact match, try pattern matching
+    if (!routeConfigOrArr) {
+      const matchingPath = Object.keys(config.routes).find(path => {
+        if (path.includes(':')) {
+          const regexPath = path.replace(/:[^\/]+/g, '[^/]+');
+          const regex = new RegExp(`^${regexPath}$`);
+          return regex.test(req.path);
+        }
+        return false;
+      });
+      if (matchingPath) {
+        routeConfigOrArr = config.routes[matchingPath];
+      }
+    }
+
+    if (!routeConfigOrArr) {
+      return next();
+    }
+
+    // Resolve function-based route configs (for dynamic pricing, etc.)
+    if (typeof routeConfigOrArr === "function") {
+      const resolved = routeConfigOrArr(req);
+      if (!resolved) return next();
+      routeConfigOrArr = resolved;
+    }
+
+    const routeConfigs = Array.isArray(routeConfigOrArr)
+      ? routeConfigOrArr
+      : [routeConfigOrArr];
+
+    // Build accepting requirements from all configured options
+    const accepts = routeConfigs.map((routeConfig) => {
+      const network = routeConfig.network ?? MEGAETH_NETWORK;
+      const maxTimeoutSeconds = routeConfig.maxTimeoutSeconds ?? DEFAULT_MAX_TIMEOUT_SECONDS;
+      // asset must be resolved first so parsePrice knows which decimal system to use
+      const amount = parsePrice(routeConfig.price, ethUsdRate, routeConfig.asset).toString();
+
+      const extra = { ...routeConfig.extra };
+      if (routeConfig.scheme === "permit-erc20" && !extra.spender) {
+        extra.spender = "0x0305362E71a3f5cDdBE5539DD10d067Fd8A73252";
+      }
+
+      return {
+        scheme: routeConfig.scheme,
+        network,
+        asset: routeConfig.asset,
+        amount,
+        payTo: routeConfig.payTo,
+        maxTimeoutSeconds,
+        ...(Object.keys(extra).length > 0 ? { extra } : {}),
+      } as PaymentRequirements;
+    });
+
+    const routeConfig = routeConfigs[0]; // fallback for description
+
+    // Check for payment header
+    const paymentHeader =
+      (req.headers["payment-signature"] as string) ??
+      (req.headers["x-payment"] as string);
+
+    if (!paymentHeader) {
+      // Return 402 Payment Required
+      const paymentRequired: PaymentRequired = {
+        x402Version: X402_VERSION,
+        resource: {
+          url: req.originalUrl,
+          description: routeConfig.description,
+        },
+        accepts,
+      };
+
+      const encoded = encodePaymentRequired(paymentRequired);
+      res.status(402);
+      res.setHeader("PAYMENT-REQUIRED", encoded);
+      res.json(paymentRequired);
+      return;
+    }
+
+    // Verify payment by calling the facilitator
+    try {
+      const payload = decodePaymentPayload(paymentHeader);
+
+      const facilitatorUrl = config.facilitatorUrl || "https://skate-x402-facilitator.up.railway.app";
+
+      const response = await fetch(`${facilitatorUrl}/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ payload, requirements: payload.accepted })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Facilitator error: ${response.statusText}`);
+      }
+
+      const result = await response.json() as SettleResponse;
+
+      if (!result.success) {
+        const paymentRequired: PaymentRequired = {
+          x402Version: X402_VERSION,
+          error: result.errorReason,
+          resource: {
+            url: req.originalUrl,
+            description: routeConfig.description,
+          },
+          accepts,
+        };
+
+        res.status(402);
+        res.setHeader(
+          "PAYMENT-REQUIRED",
+          encodePaymentRequired(paymentRequired)
+        );
+        res.json(paymentRequired);
+        return;
+      }
+
+      // Payment verified — store settlement in res.locals so route handlers can
+      // embed payer/txHash in their JSON body, then set response headers and continue.
+      res.locals.payerAddress = result.payer;
+      res.locals.paymentTxHash = result.txHash;
+      res.setHeader("PAYMENT-RESPONSE", encodeSettleResponse(result));
+      res.setHeader("x-payer-address", result.payer);
+      res.setHeader("x-payment-tx", result.txHash);
+      next();
+    } catch (err) {
+      res.status(400).json({
+        error: "Invalid payment header or verification failure",
+        details: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+}
