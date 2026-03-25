@@ -21,6 +21,8 @@ npm-debug.log*
 
 # Build
 *.tsbuildinfo
+cdk.out/
+cdk.context.json
 
 # Private keys — NEVER commit
 priv*.txt

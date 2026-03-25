@@ -1,3 +1,0 @@
-for scaling (more targeted towards agentic transactions rather than user transactions)
-
-1. multiple facilitator wallets for load balancing in case many requests come in simultaneously during high traffic
