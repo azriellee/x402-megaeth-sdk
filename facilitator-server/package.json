@@ -9,8 +9,12 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.500.0",
+    "@aws-sdk/client-secrets-manager": "^3.500.0",
+    "@aws-sdk/lib-dynamodb": "^3.500.0",
     "dotenv": "^16.4.0",
     "express": "^5.0.0",
+    "ioredis": "^5.4.0",
     "x402-megaeth-sdk": "file:.."
   },
   "devDependencies": {

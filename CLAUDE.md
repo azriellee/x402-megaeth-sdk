@@ -52,11 +52,19 @@ npm run demo:frontend          # Run frontend dev server (Vite)
 
 Requires `FACILITATOR_PRIVATE_KEY` in `.env` for the demo server.
 
-## Deployed Services (Railway)
+## Deployed Services
 
+**AWS (Dev account 276671279160, ap-southeast-1):**
+- Facilitator: `https://abdoopx6d7.execute-api.ap-southeast-1.amazonaws.com` (ECS Fargate + API Gateway)
+  - CDK infra: `facilitator-server/infra/` — deploy with `cd facilitator-server/infra && npx cdk deploy`
+  - Secret: `development/x402/facilitator-key` in AWS Secrets Manager (field: `FACILITATOR_PRIVATE_KEY`)
+  - DynamoDB tables: `development-x402-used-tx-hashes`, `development-x402-processed-permits`, `development-x402-settlement-stats`
+  - Redis: shared ElastiCache via `ElasticRedisEndpoint` (keys prefixed `x402:`)
+  - Shared VPC imported from `ElasticVPC` (same pattern as okx-rfq-service)
+
+**Railway (legacy, facilitator decommissioned):**
 - Frontend: https://skate-x402-frontend.up.railway.app
 - Server: https://skate-x402-server.up.railway.app
-- Facilitator: https://skate-x402-facilitator.up.railway.app
 
 ## MegaETH Chain Details
 
@@ -64,6 +72,14 @@ Requires `FACILITATOR_PRIVATE_KEY` in `.env` for the demo server.
 - RPC: https://mainnet.megaeth.com/rpc
 - 10ms block times, 60k minimum gas
 - USDM token: 0x3154Cf16ccdb4C6d922629664174b904d80F2C35
+
+## AWS Migration Status
+
+**Phase 1 (Complete):** CDK infrastructure deployed — ECS Fargate, ALB, API Gateway (HTTPS), 3 DynamoDB tables, Secrets Manager integration. Branch: `feat/aws-infra`.
+
+**Phase 2 (Complete):** Interface-based state externalization — store interfaces defined in SDK (`TxHashStore`, `PermitStore`, `NonceStore`, `SettlementTracker`), concrete DynamoDB/Redis implementations in `facilitator-server/src/`. Verifier accepts optional stores with in-memory fallback (backward compatible).
+
+**Phase 3 (Complete):** Cutover — facilitator URL switched to AWS endpoint, Railway facilitator decommissioned.
 
 ## Code Conventions
 

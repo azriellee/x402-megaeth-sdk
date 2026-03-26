@@ -19,7 +19,7 @@ Implements the [x402 protocol](https://x402.org) with a Three-Entity Architectur
 - **Source Code**: [GitHub](https://github.com/azriellee/x402-megaeth-sdk)
 - **Frontend Demo UI**: [https://skate-x402-frontend.up.railway.app](https://skate-x402-frontend.up.railway.app)
 - **Demo API Server**: [https://skate-x402-server.up.railway.app](https://skate-x402-server.up.railway.app)
-- **Hosted Facilitator**: [https://skate-x402-facilitator.up.railway.app](https://skate-x402-facilitator.up.railway.app)
+- **Hosted Facilitator**: [https://abdoopx6d7.execute-api.ap-southeast-1.amazonaws.com](https://abdoopx6d7.execute-api.ap-southeast-1.amazonaws.com)
 
 --- 
 
@@ -90,7 +90,7 @@ app.use(Server.paymentMiddleware({
       payTo: "0xProvider...",
     },
   },
-  // facilitatorUrl: "https://skate-facilitator.up.railway.app",  leave option blank to use facilitator set up by skate
+  // facilitatorUrl: "https://abdoopx6d7.execute-api.ap-southeast-1.amazonaws.com",  leave option blank to use facilitator set up by skate
 }));
 
 app.get("/api/premium", (req, res) => {
