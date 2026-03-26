@@ -222,18 +222,12 @@ export class X402FacilitatorService extends Construct {
       protocolType: "HTTP",
     });
 
-    const integration = new apigwv2.CfnIntegration(this, "AlbIntegration", {
+    const integration = new apigwv2.CfnIntegration(this, "HttpIntegration", {
       apiId: httpApi.ref,
       integrationType: "HTTP_PROXY",
-      integrationUri: httpListener.listenerArn,
+      integrationUri: `http://${alb.loadBalancerDnsName}`,
       integrationMethod: "ANY",
       payloadFormatVersion: "1.0",
-      connectionType: "VPC_LINK",
-      connectionId: new apigwv2.CfnVpcLink(this, "VpcLink", {
-        name: `${serviceStage}-x402-facilitator-vpclink`,
-        subnetIds: Fn.split(",", Fn.importValue("PublicSubnetIds")),
-        securityGroupIds: [fargateSecurityGroup.securityGroupId],
-      }).ref,
     });
 
     // eslint-disable-next-line no-new

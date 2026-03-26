@@ -21,6 +21,11 @@ import type {
   PaymentPayload,
   PaymentRequirements,
   SettleResponse,
+  VerifierStores,
+  TxHashStore,
+  PermitStore,
+  NonceStore,
+  SettlementTracker,
 } from "../shared/types.js";
 import { recoverPermitSigner } from "./utils.js";
 type QueueTask = () => Promise<void>;
@@ -36,15 +41,25 @@ export class FacilitatorVerifier {
   private publicClient: PublicClient;
   private walletClient?: WalletClient<Transport, Chain, Account>;
   private account?: Account;
+  private settlementQueue: Promise<void> = Promise.resolve();
+
+  // In-memory fallbacks (used when external stores are not provided)
   private usedTxHashes: Set<string> = new Set();
   private processedPermits: Set<string> = new Set();
   private pendingPermits: Set<string> = new Set();
-  private settlementQueue: Promise<void> = Promise.resolve();
-
-  // Track the expected nonce per user to compensate for lagging RPC nodes
   private expectedUserNonces: Map<string, bigint> = new Map();
 
-  constructor(rpcUrl: string = MEGAETH_RPC, privateKey?: `0x${string}`) {
+  // Optional external stores for durable state
+  private txHashStore?: TxHashStore;
+  private permitStore?: PermitStore;
+  private nonceStore?: NonceStore;
+  private settlementTracker?: SettlementTracker;
+
+  constructor(
+    rpcUrl: string = MEGAETH_RPC,
+    privateKey?: `0x${string}`,
+    stores?: VerifierStores
+  ) {
     this.publicClient = createPublicClient({
       chain: megaeth,
       transport: http(rpcUrl),
@@ -57,6 +72,13 @@ export class FacilitatorVerifier {
         chain: megaeth,
         transport: http(rpcUrl),
       });
+    }
+
+    if (stores) {
+      this.txHashStore = stores.txHashStore;
+      this.permitStore = stores.permitStore;
+      this.nonceStore = stores.nonceStore;
+      this.settlementTracker = stores.settlementTracker;
     }
   }
 
@@ -118,7 +140,19 @@ export class FacilitatorVerifier {
       };
     }
 
-    if (this.usedTxHashes.has(txHash)) {
+    // Replay protection: check external store or in-memory set
+    if (this.txHashStore) {
+      const isNew = await this.txHashStore.checkAndMark(txHash);
+      if (!isNew) {
+        return {
+          success: false,
+          txHash,
+          network,
+          payer: from,
+          errorReason: "Transaction already used for a previous payment",
+        };
+      }
+    } else if (this.usedTxHashes.has(txHash)) {
       return {
         success: false,
         txHash,
@@ -141,6 +175,24 @@ export class FacilitatorVerifier {
           payer: from,
           errorReason: "Transaction reverted on-chain",
         };
+      }
+
+      // maxAge check: reject native txs older than 10 minutes
+      const MAX_AGE_SECONDS = 600;
+      try {
+        const block = await this.publicClient.getBlock({ blockNumber: receipt.blockNumber });
+        const txAge = Math.floor(Date.now() / 1000) - Number(block.timestamp);
+        if (txAge > MAX_AGE_SECONDS) {
+          return {
+            success: false,
+            txHash,
+            network,
+            payer: from,
+            errorReason: `Transaction too old: ${txAge}s (max ${MAX_AGE_SECONDS}s)`,
+          };
+        }
+      } catch {
+        // If we can't get block timestamp, skip maxAge check rather than reject
       }
 
       const tx = await this.getTransactionFromBlockOrRPC(receipt);
@@ -184,7 +236,19 @@ export class FacilitatorVerifier {
         };
       }
 
-      this.usedTxHashes.add(txHash);
+      // Mark as used (in-memory fallback when no external store)
+      if (!this.txHashStore) {
+        this.usedTxHashes.add(txHash);
+      }
+
+      // Track settlement
+      this.settlementTracker?.record({
+        scheme: "exact-native",
+        asset: requirements.asset,
+        amountWei: requirements.amount,
+        payer: from,
+        success: true,
+      });
 
       return { success: true, txHash, network, payer: from };
     } catch (err) {
@@ -223,18 +287,31 @@ export class FacilitatorVerifier {
 
     const { r, s } = payload.payload.permitSignature!;
     const sigKey = `${r}-${s}`;
-    if (this.processedPermits.has(sigKey) || this.pendingPermits.has(sigKey)) {
-      return {
-        success: false,
-        txHash: "",
-        network,
-        payer: from,
-        errorReason: "Payment signature already processed",
-      };
-    }
 
-    // 2. SOFT-SUCCESS: Fire off the on-chain settlement and return success immediately
-    this.pendingPermits.add(sigKey);
+    // Dedup check: external store or in-memory
+    if (this.permitStore) {
+      const isNew = await this.permitStore.checkAndMarkPending(sigKey);
+      if (!isNew) {
+        return {
+          success: false,
+          txHash: "",
+          network,
+          payer: from,
+          errorReason: "Payment signature already processed",
+        };
+      }
+    } else {
+      if (this.processedPermits.has(sigKey) || this.pendingPermits.has(sigKey)) {
+        return {
+          success: false,
+          txHash: "",
+          network,
+          payer: from,
+          errorReason: "Payment signature already processed",
+        };
+      }
+      this.pendingPermits.add(sigKey);
+    }
 
     this.enqueueSettlement(async () => {
       await this.executeSettlementAsync(payload, requirements);
@@ -345,15 +422,18 @@ export class FacilitatorVerifier {
         }),
       ]);
 
-      const expectedNonce = this.expectedUserNonces.get(from.toLowerCase()) ?? onChainNonce;
-      const effectiveNonce = onChainNonce > expectedNonce ? onChainNonce : expectedNonce;
+      let effectiveNonce: bigint;
+      if (this.nonceStore) {
+        effectiveNonce = await this.nonceStore.getAndIncrement(from, onChainNonce);
+      } else {
+        const expectedNonce = this.expectedUserNonces.get(from.toLowerCase()) ?? onChainNonce;
+        effectiveNonce = onChainNonce > expectedNonce ? onChainNonce : expectedNonce;
+        this.expectedUserNonces.set(from.toLowerCase(), effectiveNonce + 1n);
+      }
 
       if (effectiveNonce !== BigInt(nonce)) {
         return { success: false, txHash: "", network, payer: from, errorReason: `Nonce mismatch: Expected ${effectiveNonce}, got ${nonce}` };
       }
-      
-      // Assume this permit will succeed on-chain and advance the expected nonce for the next request
-      this.expectedUserNonces.set(from.toLowerCase(), effectiveNonce + 1n);
 
       if (balance < amount) {
         return { success: false, txHash: "", network, payer: from, errorReason: "Insufficient balance" };
@@ -376,6 +456,9 @@ export class FacilitatorVerifier {
     const { v, r, s, deadline, value } = permitSignature;
     const amount = BigInt(value);
     const sigKey = `${r}-${s}`;
+    const startTime = Date.now();
+    let settled = false;
+
     try {
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
@@ -411,22 +494,54 @@ export class FacilitatorVerifier {
 
           await this.publicClient.waitForTransactionReceipt({ hash: transferTxHash });
 
-          this.processedPermits.add(sigKey);
-          console.log(`[Settlement Success] Payer: ${from}, Tx: ${transferTxHash}`);
+          settled = true;
+
+          // Mark processed in external store or in-memory
+          if (this.permitStore) {
+            await this.permitStore.markProcessed(sigKey);
+          } else {
+            this.processedPermits.add(sigKey);
+          }
+
+          const durationMs = Date.now() - startTime;
+          this.settlementTracker?.record({
+            scheme: "permit-erc20",
+            asset: requirements.asset,
+            amountWei: value,
+            payer: from,
+            success: true,
+            durationMs,
+          });
+
+          console.log(`[Settlement Success] Payer: ${from}, Tx: ${transferTxHash}, Duration: ${durationMs}ms`);
           return; // Success
         } catch (err) {
           console.error(`[Settlement Attempt ${attempt}/${retries} Failed]`, err);
           if (attempt < retries) {
-            await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)); // Linear backoff
+            await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
           }
         }
       }
+
+      // All retries exhausted
+      if (this.permitStore) {
+        await this.permitStore.markFailed(sigKey);
+      }
+
+      this.settlementTracker?.record({
+        scheme: "permit-erc20",
+        asset: requirements.asset,
+        amountWei: value,
+        payer: from,
+        success: false,
+        durationMs: Date.now() - startTime,
+      });
+
       console.error(`[Settlement Fatal] Failed to settle payment for ${from} after ${retries} attempts.`);
     } finally {
-      this.pendingPermits.delete(sigKey);
-      
-      // If it fatally failed on-chain, we should ideally resync the user's nonce in our tracker,
-      // but for simplicity we rely on the next successful request's onChainNonce > expectedNonce override.
+      if (!this.permitStore) {
+        this.pendingPermits.delete(sigKey);
+      }
     }
   }
 

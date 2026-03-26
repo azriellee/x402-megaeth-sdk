@@ -1,7 +1,19 @@
 import "dotenv/config";
 import express from "express";
 import { Facilitator } from "x402-megaeth-sdk";
-import type { PaymentPayload, PaymentRequirements } from "x402-megaeth-sdk";
+import type {
+  PaymentPayload,
+  PaymentRequirements,
+  VerifierStores,
+} from "x402-megaeth-sdk";
+
+import {
+  createDynamoClient,
+  DynamoTxHashStore,
+  DynamoPermitStore,
+  DynamoSettlementTracker,
+} from "./dynamo.js";
+import { createRedisClient, RedisNonceStore } from "./redis.js";
 
 async function getPrivateKey(): Promise<`0x${string}`> {
   // In AWS (development stage): fetch from Secrets Manager
@@ -44,6 +56,60 @@ async function getPrivateKey(): Promise<`0x${string}`> {
   );
 }
 
+function initStores(): {
+  stores: VerifierStores;
+  statsTracker?: DynamoSettlementTracker;
+  redisCleanup?: () => Promise<void>;
+} {
+  const stores: VerifierStores = {};
+  let statsTracker: DynamoSettlementTracker | undefined;
+  let redisCleanup: (() => Promise<void>) | undefined;
+
+  // DynamoDB stores — only if table env vars are set
+  const txHashesTable = process.env.TX_HASHES_TABLE;
+  const permitsTable = process.env.PERMITS_TABLE;
+  const statsTable = process.env.STATS_TABLE;
+
+  if (txHashesTable || permitsTable || statsTable) {
+    const docClient = createDynamoClient();
+    console.log("DynamoDB stores initialized");
+
+    if (txHashesTable) {
+      stores.txHashStore = new DynamoTxHashStore(docClient, txHashesTable);
+      console.log(`  TxHash store: ${txHashesTable}`);
+    }
+    if (permitsTable) {
+      stores.permitStore = new DynamoPermitStore(docClient, permitsTable);
+      console.log(`  Permit store: ${permitsTable}`);
+    }
+    if (statsTable) {
+      statsTracker = new DynamoSettlementTracker(docClient, statsTable);
+      stores.settlementTracker = statsTracker;
+      console.log(`  Stats tracker: ${statsTable}`);
+    }
+  } else {
+    console.log("No DynamoDB tables configured — using in-memory stores");
+  }
+
+  // Redis nonce store — only if REDIS_URL is set
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    const redis = createRedisClient(redisUrl);
+    redis.connect().catch((err: Error) =>
+      console.error("Redis connect failed:", err.message)
+    );
+    stores.nonceStore = new RedisNonceStore(redis);
+    redisCleanup = async () => {
+      await redis.quit();
+      console.log("Redis connection closed");
+    };
+  } else {
+    console.log("No REDIS_URL configured — using in-memory nonce tracking");
+  }
+
+  return { stores, statsTracker, redisCleanup };
+}
+
 async function main() {
   let privateKey: `0x${string}`;
   try {
@@ -53,13 +119,33 @@ async function main() {
     process.exit(1);
   }
 
-  const verifier = new Facilitator.FacilitatorVerifier(undefined, privateKey);
+  const { stores, statsTracker, redisCleanup } = initStores();
+
+  const verifier = new Facilitator.FacilitatorVerifier(
+    undefined,
+    privateKey,
+    stores
+  );
 
   const app = express();
   app.use(express.json());
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", facilitator: verifier.address });
+  });
+
+  app.get("/stats", async (_req, res) => {
+    if (!statsTracker) {
+      res.status(501).json({ error: "Stats not configured (no STATS_TABLE)" });
+      return;
+    }
+    try {
+      const stats = await statsTracker.getStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("Stats query error:", err);
+      res.status(500).json({ error: String(err) });
+    }
   });
 
   app.post("/verify", async (req, res) => {
@@ -81,6 +167,15 @@ async function main() {
       res.status(500).json({ error: String(err) });
     }
   });
+
+  // Graceful shutdown
+  const shutdown = async () => {
+    console.log("Shutting down...");
+    if (redisCleanup) await redisCleanup();
+    process.exit(0);
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 
   const PORT = parseInt(process.env.PORT || "3403", 10);
   app.listen(PORT, () => {

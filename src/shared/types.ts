@@ -76,3 +76,49 @@ export interface MiddlewareConfig {
   routes: RoutesConfig;
   facilitatorUrl?: string; // URL for the facilitator verification server
 }
+
+// ──────────────────────────────────────────────
+// Store interfaces for state externalization
+// The SDK defines these abstractions; deployments provide concrete implementations
+// (e.g., DynamoDB, Redis). If not provided, the verifier falls back to in-memory.
+// ──────────────────────────────────────────────
+
+/** Replay protection for native ETH payments (txHash dedup) */
+export interface TxHashStore {
+  /** Returns true if txHash is new (marked), false if already seen (replay) */
+  checkAndMark(txHash: string): Promise<boolean>;
+}
+
+/** Permit signature dedup and lifecycle tracking */
+export interface PermitStore {
+  /** Returns true if sigKey is new (marked pending), false if already seen */
+  checkAndMarkPending(sigKey: string): Promise<boolean>;
+  markProcessed(sigKey: string): Promise<void>;
+  markFailed(sigKey: string): Promise<void>;
+}
+
+/** Per-user nonce tracking for rapid permit submissions */
+export interface NonceStore {
+  /** Returns the effective nonce to use, advancing the stored nonce atomically */
+  getAndIncrement(address: string, onChainNonce: bigint): Promise<bigint>;
+}
+
+/** Fire-and-forget settlement analytics */
+export interface SettlementTracker {
+  record(params: {
+    scheme: string;
+    asset: string;
+    amountWei: string;
+    payer: string;
+    success: boolean;
+    durationMs?: number;
+  }): void;
+}
+
+/** Aggregated store configuration passed to the verifier */
+export interface VerifierStores {
+  txHashStore?: TxHashStore;
+  permitStore?: PermitStore;
+  nonceStore?: NonceStore;
+  settlementTracker?: SettlementTracker;
+}
