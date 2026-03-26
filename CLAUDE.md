@@ -62,10 +62,9 @@ Requires `FACILITATOR_PRIVATE_KEY` in `.env` for the demo server.
   - Redis: shared ElastiCache via `ElasticRedisEndpoint` (keys prefixed `x402:`)
   - Shared VPC imported from `ElasticVPC` (same pattern as okx-rfq-service)
 
-**Railway (legacy, to be decommissioned):**
+**Railway (legacy, facilitator decommissioned):**
 - Frontend: https://skate-x402-frontend.up.railway.app
 - Server: https://skate-x402-server.up.railway.app
-- Facilitator: https://skate-x402-facilitator.up.railway.app
 
 ## MegaETH Chain Details
 
@@ -78,9 +77,9 @@ Requires `FACILITATOR_PRIVATE_KEY` in `.env` for the demo server.
 
 **Phase 1 (Complete):** CDK infrastructure deployed — ECS Fargate, ALB, API Gateway (HTTPS), 3 DynamoDB tables, Secrets Manager integration. Branch: `feat/aws-infra`.
 
-**Phase 2 (In Progress):** Interface-based state externalization — store interfaces defined in SDK (`TxHashStore`, `PermitStore`, `NonceStore`, `SettlementTracker`), concrete DynamoDB/Redis implementations in `facilitator-server/src/`. Verifier accepts optional stores with in-memory fallback (backward compatible).
+**Phase 2 (Complete):** Interface-based state externalization — store interfaces defined in SDK (`TxHashStore`, `PermitStore`, `NonceStore`, `SettlementTracker`), concrete DynamoDB/Redis implementations in `facilitator-server/src/`. Verifier accepts optional stores with in-memory fallback (backward compatible).
 
-**Phase 3 (Pending):** Cutover — switch demo/production configs to AWS endpoint, decommission Railway.
+**Phase 3 (Complete):** Cutover — facilitator URL switched to AWS endpoint, Railway facilitator decommissioned.
 
 ## Code Conventions
 
